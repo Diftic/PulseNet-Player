@@ -23,5 +23,5 @@ window.STATIONS = [
   { id: 'r6', label: 'Starlight Lounge',     playlistId: 'UUDemStdcwUHbqhD2ePbKH6A', icon: 'assets/stations/PulseNet_-_Starlight_Lounge_station_logo.png',    side: 'right', slot: 6 },
   { id: 'r7', label: 'The Cargo Deck',       playlistId: 'UUDemStdcwUHbqhD2ePbKH6A', icon: 'assets/stations/PulseNet_-_The_Cargo_Deck_station_logo.png',      side: 'right', slot: 7 },
   { id: 'r8', label: 'The Foundry',          playlistId: 'UUDemStdcwUHbqhD2ePbKH6A', icon: 'assets/stations/PulseNet_-_The_Foundry_logo.png',                  side: 'right', slot: 8 },
-  { id: 'r9', label: 'Trailstar',            playlistId: 'UUDemStdcwUHbqhD2ePbKH6A', icon: 'assets/stations/PilseNet_-_Trailstar_logo.png',                    side: 'right', slot: 9 },
+  { id: 'r9', label: 'Trailstar',            playlistId: 'UUDemStdcwUHbqhD2ePbKH6A', icon: 'assets/stations/PulseNet_-_Trailstar_logo.png',                    side: 'right', slot: 9 },
 ];
