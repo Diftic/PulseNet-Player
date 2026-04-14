@@ -11,9 +11,8 @@
         Visibility="Collapsed"
         Title="Pulsenet Radio">
     <Window.Background>
-        <!-- Opacity is user-configurable via Settings → Background Opacity.
-             Must NOT be zero — fully transparent areas click-through in WPF. -->
-        <SolidColorBrush x:Name="OverlayBg" Color="#1a1a1a" Opacity="0.05"/>
+        <!-- Transparent — areas outside the WebView2 widget are click-through. -->
+        <SolidColorBrush Color="Transparent"/>
     </Window.Background>
 
     <Grid>

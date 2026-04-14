@@ -44,3 +44,4 @@
 - WebView2 user data is shared across all virtual-host pages (good — auth persists)
 - If the Renderer folder is missing at runtime, the overlay will show a navigation error page with a helpful message
 - UpdateChecker silently returns "no update" on any HTTP error — safe for the placeholder URL
+- The overlay window is fullscreen but fully transparent outside the WebView2 widget — click-through is handled by WPF's `AllowsTransparency` + `Background="Transparent"` combination, not `WS_EX_TRANSPARENT` (which would also pass through the player itself)

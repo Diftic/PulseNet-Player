@@ -47,7 +47,7 @@ All overlay infrastructure is 100% reused: WebView2 transparency, mouse hook for
 `PulsenetSettings` (was `SchudSettings`):
 - Removed: `OverlayUrl`
 - Added: `YoutubeChannelId` (default: empty string)
-- Kept: `ToggleHotkey`, `OverlayOpacity`, `BackgroundOpacity`, `WebViewWidthPct`, `WebViewHeightPct`, `WebViewZoomPct`, `AutoStartWithWindows`, `InstallationId`
+- Kept: `ToggleHotkey`, `WebViewWidthPct`, `WebViewHeightPct`, `WebViewZoomPct`, `AutoStartWithWindows`, `InstallationId`
 
 ### File inventory
 
@@ -87,6 +87,23 @@ pulsenet-radio/
 ├── Directory.Packages.props
 └── pulsenet.slnx
 ```
+
+---
+
+## 2026-03-30 — Simplify overlay: remove opacity, transparent background
+
+The overlay was inherited from SC-HUD which had a fullscreen semi-transparent backdrop to darken the game world behind it. That's not appropriate for a radio player — the overlay should sit on top of whatever you're doing without covering it.
+
+**Changes:**
+
+- Removed `OverlayOpacity` and `BackgroundOpacity` from `PulsenetSettings` — the overlay runs at full opacity, always
+- Removed `ApplyOpacity` and `ApplyBackgroundOpacity` from `OverlayWindow` — including the CSS `opacity` injection hack (was needed because WebView2's DirectComposition surface bypasses `Window.Opacity`; no longer relevant)
+- `BuildOverlayStyleScript` simplified to zoom-only; still injects `background:transparent` on `html,body` so the renderer's own background doesn't block anything
+- `OverlayWindow.xaml` background changed from `#1a1a1a @ 5%` to `Transparent` — with `AllowsTransparency="True"`, WPF passes clicks through fully transparent pixels, so everything outside the WebView2 widget is now click-through
+- Removed Opacity and Background Opacity sliders from `SettingsWindow.xaml`; window height shrunk from 580 → 460 accordingly
+- `SettingsWindow` constructor signature simplified (dropped `opacityPreview` and `bgOpacityPreview` callbacks)
+
+**Result:** The fullscreen WPF window still covers the primary display, but only the WebView2 widget itself is visible and interactive. All surrounding area is invisible and click-through.
 
 ---
 

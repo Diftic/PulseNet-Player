@@ -33,8 +33,7 @@ public partial class OverlayWindow : Window
     private bool _webViewReady;
     private bool _isVisible;
     private bool _navigationErrorShown;
-    private double _opacity  = 1.0;
-    private int    _zoomPct  = 100;
+    private int  _zoomPct = 100;
     private string _loadedChannelId = string.Empty;
 
     public event EventHandler? OverlayShown;
@@ -115,8 +114,6 @@ public partial class OverlayWindow : Window
             WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE,
             exStyle | (int)WINDOW_EX_STYLE.WS_EX_TOOLWINDOW);
 
-        ApplyOpacity(_settings.Current.OverlayOpacity);
-        ApplyBackgroundOpacity(_settings.Current.BackgroundOpacity);
     }
 
     protected override async void OnContentRendered(EventArgs e)
@@ -157,7 +154,7 @@ public partial class OverlayWindow : Window
         StealForeground();
 
         // Re-inject styles every time the overlay is shown.
-        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_zoomPct));
         _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildSettingsButtonScript());
 
         OverlayShown?.Invoke(this, EventArgs.Empty);
@@ -180,18 +177,10 @@ public partial class OverlayWindow : Window
     // Settings hot-reload
     // -------------------------------------------------------------------------
 
-    public void ApplyBackgroundOpacity(byte value)
-    {
-        OverlayBg.Opacity = Math.Max((byte)1, value) / 255.0;
-        _logger.LogDebug("ApplyBackgroundOpacity: byte={Value}", value);
-    }
-
     private void OnSettingsChanged(object? sender, PulsenetSettings settings)
     {
         Dispatcher.Invoke(() =>
         {
-            ApplyOpacity(settings.OverlayOpacity);
-            ApplyBackgroundOpacity(settings.BackgroundOpacity);
             ApplyZoom(settings.WebViewZoomPct);
             ApplySize(settings.WebViewWidthPct, settings.WebViewHeightPct);
 
@@ -277,14 +266,6 @@ public partial class OverlayWindow : Window
             PInvoke.AttachThreadInput(fgThread, uiThread, false);
     }
 
-    // -------------------------------------------------------------------------
-    // Opacity — inject CSS opacity on the html element.
-    // Window.Opacity and SetLayeredWindowAttributes both fail for WebView2
-    // because its DirectComposition surface bypasses the host window's alpha.
-    // CSS opacity runs inside Chromium's GPU compositor and correctly blends
-    // the page (including its background) against the transparent WPF window.
-    // -------------------------------------------------------------------------
-
     public void ApplySize(int widthPct, int heightPct)
     {
         widthPct  = Math.Clamp(widthPct,  10, 100);
@@ -310,20 +291,12 @@ public partial class OverlayWindow : Window
         _logger.LogDebug("ApplySize: {W}% × {H}%", widthPct, heightPct);
     }
 
-    public void ApplyOpacity(byte value)
-    {
-        _opacity = value / 255.0;
-        _logger.LogDebug("ApplyOpacity: byte={Value} → {Opacity:F3}", value, _opacity);
-        if (_webViewReady)
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
-    }
-
     public void ApplyZoom(int zoomPct)
     {
         _zoomPct = Math.Clamp(zoomPct, 10, 200);
         _logger.LogDebug("ApplyZoom: {Zoom}%", _zoomPct);
         if (_webViewReady)
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_zoomPct));
     }
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -332,13 +305,13 @@ public partial class OverlayWindow : Window
             Dispatcher.Invoke(() => SettingsRequested?.Invoke(this, EventArgs.Empty));
     }
 
-    private static string BuildOverlayStyleScript(double opacity, int zoomPct) =>
+    private static string BuildOverlayStyleScript(int zoomPct) =>
         $"(function(){{" +
         $"var s=document.getElementById('__ol_style');" +
         $"if(!s){{s=document.createElement('style');s.id='__ol_style';" +
         $"(document.head||document.documentElement).appendChild(s);}}" +
         $"s.textContent='html,body{{background:transparent!important}}" +
-        $"html{{opacity:{opacity:F3}!important;zoom:{zoomPct}%!important}}';" +
+        $"html{{zoom:{zoomPct}%!important}}';" +
         $"}})();";
 
     private static string BuildSettingsButtonScript() =>
@@ -525,7 +498,6 @@ public partial class OverlayWindow : Window
             _webViewReady = true;
             _logger.LogInformation("WebView2 ready — player URL: {Url}", initialUrl);
 
-            ApplyOpacity(_settings.Current.OverlayOpacity);
             ApplyZoom(_settings.Current.WebViewZoomPct);
             ApplySize(_settings.Current.WebViewWidthPct, _settings.Current.WebViewHeightPct);
         }
@@ -565,7 +537,7 @@ public partial class OverlayWindow : Window
         {
             _webViewReady = true;
             _navigationErrorShown = false;
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_zoomPct));
             _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildSettingsButtonScript());
             return;
         }

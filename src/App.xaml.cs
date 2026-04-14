@@ -111,11 +111,9 @@ public partial class App : Application
         if (_overlay is not null)
             _overlay.Topmost = false;
 
-        Action<byte>?    preview         = _overlay is not null ? _overlay.ApplyOpacity           : null;
-        Action<byte>?    bgPreview       = _overlay is not null ? _overlay.ApplyBackgroundOpacity  : null;
-        Action<int,int>? sizePreview     = _overlay is not null ? _overlay.ApplySize               : null;
-        Action<int>?     zoomPreview     = _overlay is not null ? _overlay.ApplyZoom               : null;
-        _settingsWindow = new SettingsWindow(settings, preview, bgPreview, sizePreview, zoomPreview);
+        Action<int,int>? sizePreview = _overlay is not null ? _overlay.ApplySize : null;
+        Action<int>?     zoomPreview = _overlay is not null ? _overlay.ApplyZoom : null;
+        _settingsWindow = new SettingsWindow(settings, sizePreview, zoomPreview);
         _settingsWindow.Closed += (_, _) =>
         {
             if (_listener is not null)

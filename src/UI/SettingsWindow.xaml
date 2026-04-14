@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Pulsenet Radio — Settings"
-        Width="440" Height="580"
+        Width="440" Height="460"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
@@ -179,40 +179,6 @@
                 <StackPanel>
                     <Border Style="{StaticResource RowDivider}" Padding="14,9">
                         <TextBlock Style="{StaticResource SectionHeader}" Text="OVERLAY"/>
-                    </Border>
-
-                    <!-- Opacity -->
-                    <Border Style="{StaticResource RowDivider}" Padding="14,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource RowLabel}" Text="Opacity"/>
-                            <Slider Grid.Column="1" x:Name="OpacitySlider"
-                                    Minimum="10" Maximum="100" Width="160"
-                                    VerticalAlignment="Center"
-                                    ValueChanged="OnOpacityChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="OpacityLabel" Style="{StaticResource ValueLabel}"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Background Opacity -->
-                    <Border Style="{StaticResource RowDivider}" Padding="14,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource RowLabel}" Text="Background Opacity"/>
-                            <Slider Grid.Column="1" x:Name="BgOpacitySlider"
-                                    Minimum="0" Maximum="100" Width="160"
-                                    VerticalAlignment="Center"
-                                    ValueChanged="OnBgOpacityChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="BgOpacityLabel" Style="{StaticResource ValueLabel}"/>
-                        </Grid>
                     </Border>
 
                     <!-- Width -->
