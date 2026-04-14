@@ -107,6 +107,55 @@ The overlay was inherited from SC-HUD which had a fullscreen semi-transparent ba
 
 ---
 
+---
+
+## 2026-04-14 — Modules 0-2 — Sci-fi frame overlay rebuild
+
+**Architecture decision: stay WPF, not Python rewrite.**
+The RadioPlan.md proposal to rewrite in PyQt6 was discarded — no technical justification, WebView2 is more reliable than QWebEngineView on Windows for YouTube, and the existing WPF infrastructure was already proven.
+
+### Frame asset
+- Source image: `src/Assets/radio_backround.png` — 2515×1292, transparent outside frame
+- Video area cut to fully transparent by user
+- Displayed at 50% → **1258×646** window
+- Video rect within display: `left=220 top=100 width=812 height=433`
+- Left button column: `x=0 y=100 w=220 h=433`
+- Right button column: `x=1032 y=100 w=226 h=433`
+
+### Renderer rebuild (everything visual lives in HTML/CSS/JS)
+WPF airspace problem (WebView2 HWND always renders above WPF visuals) means the frame and buttons cannot be WPF elements. Solution: put everything in the renderer.
+
+Layer stack (z-index):
+1. YouTube iframe — `video-wrap` at video rect
+2. `frame_base.png` — structural frame, `pointer-events:none`
+3. `frame_glow.png` — glow overlay, CSS pulse animation, hidden until asset exists
+4. Station buttons — `pointer-events:auto`, inside frame panel areas
+
+### Station buttons
+- 18 buttons: 9 left column + 9 right column
+- Icon-based; hover shows station name (tooltip)
+- Defined in `Renderer/stations.js` — all pointing to `@Mr_Xul` test channel
+- Clicking a button calls `player.loadPlaylist()` via YouTube IFrame API
+- Active button gets cyan glow border
+
+### Window changes
+- Fixed size: `Constants.FrameDisplayWidth × FrameDisplayHeight` (1258×646)
+- No longer fullscreen — centered on primary screen on show
+- Drag-to-move: JS detects mousedown on frame border areas, posts `{type:'drag', dx, dy}` to C#, which moves the window via `Left += dx; Top += dy`
+- Removed: `ApplySize`, `WebViewWidthPct`, `WebViewHeightPct`
+- Kept: `ApplyZoom`, zoom slider in settings
+
+### Channel ID
+- Test channel: `@Mr_Xul` → `UCDemStdcwUHbqhD2ePbKH6A`
+- Default uploads playlist: `UUDemStdcwUHbqhD2ePbKH6A`
+- Stored in `Constants.DefaultChannelId`
+
+### Remaining before first run
+- `frame_glow.png` — glow-only layer for animation (separate from frame_base)
+- Test build against real YouTube playback
+
+---
+
 ## In-Universe Lore
 
 **Pulse Broadcasting Network (PulseNet)**
