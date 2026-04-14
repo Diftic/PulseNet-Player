@@ -87,21 +87,28 @@ html, body {
 /* ---- Layer 4: Station columns ---- */
 .station-col {
   position: absolute;
-  top: 100px;
+  top: 96px;
   height: 433px;
   z-index: 4;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 6px 5px;
-  gap: 3px;
+  gap: 17px;
+  pointer-events: none;
 }
 
-#stations-left  { left: 0;     width: 220px; }
-#stations-right { left: 1032px; width: 226px; }
+#stations-left  { left: 45px;   width: 220px; }
+#stations-right { left: 987px;  width: 226px; }
 
 /* ---- Station button ---- */
 .station-btn {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  pointer-events: auto;
+  transform: scale(1.23);
   display: flex;
   flex-direction: column;
   align-items: center;

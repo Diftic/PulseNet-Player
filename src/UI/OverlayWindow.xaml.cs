@@ -470,7 +470,15 @@ public partial class OverlayWindow : Window
 
             WebView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0, 0, 0, 0);
 
-            _env = await CoreWebView2Environment.CreateAsync(userDataFolder: cacheFolder);
+            // Disable disk cache so local Renderer file changes take effect immediately
+            // without requiring a manual cache clear between runs.
+            var envOptions = new CoreWebView2EnvironmentOptions
+            {
+                AdditionalBrowserArguments = "--disk-cache-size=0"
+            };
+            _env = await CoreWebView2Environment.CreateAsync(
+                userDataFolder: cacheFolder,
+                options: envOptions);
             await WebView.EnsureCoreWebView2Async(_env);
             WebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
