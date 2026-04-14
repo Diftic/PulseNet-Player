@@ -2,48 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pulsenet Radio</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="backdrop"></div>
+  <div id="app">
 
-  <div id="player-shell">
-
-    <div id="header">
-      <div id="logo-wordmark">PULSENET RADIO</div>
-      <div id="tagline">The 'Verse always has a soundtrack.</div>
+    <!-- Layer 1: YouTube player (bottom) -->
+    <div id="video-wrap">
+      <div id="player"></div>
     </div>
 
-    <!-- YouTube IFrame API mounts here -->
-    <div id="player"></div>
+    <!-- Layer 2: Sci-fi frame (no glow, structural) -->
+    <img id="frame-base" src="assets/frame_base.png" draggable="false" alt="">
 
-    <!-- Track info strip -->
-    <div id="track-info">
-      <span id="track-title">--</span>
-    </div>
+    <!-- Layer 3: Glow overlay (animated) — hidden via CSS if asset missing -->
+    <img id="frame-glow" src="assets/frame_glow.png" draggable="false" alt=""
+         onerror="this.style.display='none'">
 
-    <!-- Playback controls -->
-    <div id="controls">
-      <button class="ctrl-btn" id="btn-prev"  title="Previous track">&#9198;</button>
-      <button class="ctrl-btn" id="btn-rev"   title="Rewind 30s">&#8722;30s</button>
-      <button class="ctrl-btn primary" id="btn-play" title="Play / Pause">&#9654;</button>
-      <button class="ctrl-btn" id="btn-fwd"   title="Fast-forward 30s">&#43;30s</button>
-      <button class="ctrl-btn" id="btn-next"  title="Next track">&#9197;</button>
-    </div>
-
-    <!-- Playlist switcher -->
-    <div id="playlist-row">
-      <input id="playlist-input" type="text" placeholder="Paste playlist URL or ID to switch…" spellcheck="false">
-      <button id="btn-load-playlist">Load</button>
-    </div>
-
-    <!-- Status line -->
-    <div id="status-line" class="hidden"></div>
+    <!-- Layer 4: Station selector buttons -->
+    <div id="stations-left"  class="station-col"></div>
+    <div id="stations-right" class="station-col"></div>
 
   </div>
 
+  <script src="stations.js"></script>
   <script src="player.js"></script>
 </body>
 </html>

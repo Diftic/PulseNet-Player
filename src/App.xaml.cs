@@ -32,16 +32,13 @@ public partial class App : Application
         var overlayLogger = _host.Services.GetRequiredService<ILogger<OverlayWindow>>();
 
         // OverlayWindow must be created on the STA (UI) thread.
-        // Pre-size to full primary screen so the WebView2 HwndHost initialises
-        // at the correct size. Position off-screen so it doesn't flash until
-        // the user toggles the overlay.
-        var sw = SystemParameters.PrimaryScreenWidth;
-        var sh = SystemParameters.PrimaryScreenHeight;
+        // Pre-size to the fixed frame canvas. Position off-screen so the WebView2
+        // HwndHost initialises invisibly, then snap to centre on first show.
         _overlay = new OverlayWindow(settings, overlayLogger);
         var overlay = _overlay;
-        overlay.Width  = sw;
-        overlay.Height = sh;
-        overlay.Left   = -sw;
+        overlay.Width  = Constants.FrameDisplayWidth;
+        overlay.Height = Constants.FrameDisplayHeight;
+        overlay.Left   = -(Constants.FrameDisplayWidth + 100);
         overlay.Top    = 0;
         overlay.Show(); // WebView2 begins initialising in the background
 
@@ -111,9 +108,8 @@ public partial class App : Application
         if (_overlay is not null)
             _overlay.Topmost = false;
 
-        Action<int,int>? sizePreview = _overlay is not null ? _overlay.ApplySize : null;
-        Action<int>?     zoomPreview = _overlay is not null ? _overlay.ApplyZoom : null;
-        _settingsWindow = new SettingsWindow(settings, sizePreview, zoomPreview);
+        Action<int>? zoomPreview = _overlay is not null ? _overlay.ApplyZoom : null;
+        _settingsWindow = new SettingsWindow(settings, zoomPreview);
         _settingsWindow.Closed += (_, _) =>
         {
             if (_listener is not null)

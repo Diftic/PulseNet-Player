@@ -145,7 +145,7 @@ public partial class OverlayWindow : Window
             return;
         }
 
-        CoverPrimaryScreen();
+        CenterOnScreen();
 
         _isVisible = true;
         Visibility = Visibility.Visible;
@@ -182,7 +182,6 @@ public partial class OverlayWindow : Window
         Dispatcher.Invoke(() =>
         {
             ApplyZoom(settings.WebViewZoomPct);
-            ApplySize(settings.WebViewWidthPct, settings.WebViewHeightPct);
 
             if (_webViewReady && _loadedChannelId != settings.YoutubeChannelId)
                 RestartNavigation(BuildPlayerUrl(settings.YoutubeChannelId));
@@ -266,31 +265,6 @@ public partial class OverlayWindow : Window
             PInvoke.AttachThreadInput(fgThread, uiThread, false);
     }
 
-    public void ApplySize(int widthPct, int heightPct)
-    {
-        widthPct  = Math.Clamp(widthPct,  10, 100);
-        heightPct = Math.Clamp(heightPct, 10, 100);
-
-        if (widthPct == 100 && heightPct == 100)
-        {
-            WebView.ClearValue(FrameworkElement.WidthProperty);
-            WebView.ClearValue(FrameworkElement.HeightProperty);
-            WebView.HorizontalAlignment = HorizontalAlignment.Stretch;
-            WebView.VerticalAlignment   = VerticalAlignment.Stretch;
-            WebView.Margin = new Thickness(0);
-        }
-        else
-        {
-            WebView.HorizontalAlignment = HorizontalAlignment.Center;
-            WebView.VerticalAlignment   = VerticalAlignment.Center;
-            WebView.Width  = ActualWidth  * widthPct  / 100.0;
-            WebView.Height = ActualHeight * heightPct / 100.0;
-            WebView.Margin = new Thickness(0);
-        }
-
-        _logger.LogDebug("ApplySize: {W}% × {H}%", widthPct, heightPct);
-    }
-
     public void ApplyZoom(int zoomPct)
     {
         _zoomPct = Math.Clamp(zoomPct, 10, 200);
@@ -301,8 +275,33 @@ public partial class OverlayWindow : Window
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (e.TryGetWebMessageAsString() == "open-settings")
+        var msg = e.TryGetWebMessageAsString();
+
+        if (msg == "open-settings")
+        {
             Dispatcher.Invoke(() => SettingsRequested?.Invoke(this, EventArgs.Empty));
+            return;
+        }
+
+        // Drag delta from JS frame-border drag handler — move the window.
+        if (msg.StartsWith('{'))
+        {
+            try
+            {
+                using var doc  = System.Text.Json.JsonDocument.Parse(msg);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("type", out var t) && t.GetString() == "drag")
+                {
+                    var dx = root.GetProperty("dx").GetDouble();
+                    var dy = root.GetProperty("dy").GetDouble();
+                    Dispatcher.Invoke(() => { Left += dx; Top += dy; });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("Unhandled web message: {Ex}", ex.Message);
+            }
+        }
     }
 
     private static string BuildOverlayStyleScript(int zoomPct) =>
@@ -448,14 +447,12 @@ public partial class OverlayWindow : Window
     // Positioning
     // -------------------------------------------------------------------------
 
-    private void CoverPrimaryScreen()
+    private void CenterOnScreen()
     {
         var sw = SystemParameters.PrimaryScreenWidth;
         var sh = SystemParameters.PrimaryScreenHeight;
-        Width  = sw;
-        Height = sh;
-        Left   = 0;
-        Top    = 0;
+        Left = (sw - Width)  / 2;
+        Top  = (sh - Height) / 2;
     }
 
     // -------------------------------------------------------------------------
@@ -499,7 +496,6 @@ public partial class OverlayWindow : Window
             _logger.LogInformation("WebView2 ready — player URL: {Url}", initialUrl);
 
             ApplyZoom(_settings.Current.WebViewZoomPct);
-            ApplySize(_settings.Current.WebViewWidthPct, _settings.Current.WebViewHeightPct);
         }
         catch (WebView2RuntimeNotFoundException)
         {

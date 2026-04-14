@@ -11,17 +11,15 @@ using Settings;
 public partial class SettingsWindow : Window
 {
     private readonly SettingsManager _settings;
-    private readonly Action<int, int>? _sizePreview;
     private readonly Action<int>? _zoomPreview;
 
     private readonly HashSet<KeyboardKey> _heldKeys = [];
     private KeyboardShortcut _recordedShortcut = KeyboardShortcut.None;
     private string _pendingChannelId = string.Empty;
 
-    public SettingsWindow(SettingsManager settings, Action<int, int>? sizePreview = null, Action<int>? zoomPreview = null)
+    public SettingsWindow(SettingsManager settings, Action<int>? zoomPreview = null)
     {
-        _settings = settings;
-        _sizePreview = sizePreview;
+        _settings    = settings;
         _zoomPreview = zoomPreview;
         InitializeComponent();
         LoadCurrentSettings();
@@ -40,11 +38,6 @@ public partial class SettingsWindow : Window
 
         _recordedShortcut = current.ToggleHotkey.Copy();
         HotkeyBox.Text = _recordedShortcut.ToString();
-
-        WidthSlider.Value  = Math.Clamp(current.WebViewWidthPct,  10, 100);
-        HeightSlider.Value = Math.Clamp(current.WebViewHeightPct, 10, 100);
-        WidthLabel.Text    = $"{(int)WidthSlider.Value}%";
-        HeightLabel.Text   = $"{(int)HeightSlider.Value}%";
 
         ZoomSlider.Value = Math.Clamp(current.WebViewZoomPct, 50, 150);
         ZoomLabel.Text   = $"{(int)ZoomSlider.Value}%";
@@ -84,22 +77,8 @@ public partial class SettingsWindow : Window
     }
 
     // -------------------------------------------------------------------------
-    // Size sliders
+    // Zoom slider
     // -------------------------------------------------------------------------
-
-    private void OnWidthChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (WidthLabel is null) return;
-        WidthLabel.Text = $"{(int)e.NewValue}%";
-        _sizePreview?.Invoke((int)WidthSlider.Value, (int)HeightSlider.Value);
-    }
-
-    private void OnHeightChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (HeightLabel is null) return;
-        HeightLabel.Text = $"{(int)e.NewValue}%";
-        _sizePreview?.Invoke((int)WidthSlider.Value, (int)HeightSlider.Value);
-    }
 
     private void OnZoomChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
@@ -127,11 +106,9 @@ public partial class SettingsWindow : Window
 
         var updated = _settings.Current with
         {
-            YoutubeChannelId = ChannelIdBox.Text.Trim(),
-            ToggleHotkey     = _recordedShortcut,
-            WebViewWidthPct  = (int)WidthSlider.Value,
-            WebViewHeightPct  = (int)HeightSlider.Value,
-            WebViewZoomPct    = (int)ZoomSlider.Value,
+            YoutubeChannelId     = ChannelIdBox.Text.Trim(),
+            ToggleHotkey         = _recordedShortcut,
+            WebViewZoomPct       = (int)ZoomSlider.Value,
             AutoStartWithWindows = AutoStartBox.IsChecked == true,
         };
 

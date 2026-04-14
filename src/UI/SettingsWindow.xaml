@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Pulsenet Radio — Settings"
-        Width="440" Height="460"
+        Width="440" Height="380"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
@@ -179,40 +179,6 @@
                 <StackPanel>
                     <Border Style="{StaticResource RowDivider}" Padding="14,9">
                         <TextBlock Style="{StaticResource SectionHeader}" Text="OVERLAY"/>
-                    </Border>
-
-                    <!-- Width -->
-                    <Border Style="{StaticResource RowDivider}" Padding="14,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource RowLabel}" Text="Content Width"/>
-                            <Slider Grid.Column="1" x:Name="WidthSlider"
-                                    Minimum="10" Maximum="100" Width="160"
-                                    VerticalAlignment="Center"
-                                    ValueChanged="OnWidthChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="WidthLabel" Style="{StaticResource ValueLabel}"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Height -->
-                    <Border Style="{StaticResource RowDivider}" Padding="14,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource RowLabel}" Text="Content Height"/>
-                            <Slider Grid.Column="1" x:Name="HeightSlider"
-                                    Minimum="10" Maximum="100" Width="160"
-                                    VerticalAlignment="Center"
-                                    ValueChanged="OnHeightChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="HeightLabel" Style="{StaticResource ValueLabel}"/>
-                        </Grid>
                     </Border>
 
                     <!-- Zoom -->
