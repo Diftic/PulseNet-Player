@@ -4,7 +4,7 @@ using Keyboard;
 
 public record PulsenetSettings
 {
-    public KeyboardShortcut ToggleHotkey    { get; set; } = new([KeyboardKey.F3]);
+    public KeyboardShortcut ToggleHotkey    { get; set; } = new([KeyboardKey.F9]);
     public string YoutubeChannelId          { get; set; } = string.Empty;
     public int WebViewZoomPct               { get; set; } = 100;
     public bool AutoStartWithWindows        { get; set; } = false;
