@@ -30,10 +30,11 @@ public partial class OverlayWindow : Window
     private uint _mouseHookThreadId;
 
     private CoreWebView2Environment? _env;
-    private bool _webViewReady;
-    private bool _isVisible;
-    private bool _navigationErrorShown;
-    private int  _zoomPct = 100;
+    private bool   _webViewReady;
+    private bool   _isVisible;
+    private bool   _navigationErrorShown;
+    private double _opacity  = 1.0;
+    private int    _zoomPct  = 100;
     private string _loadedChannelId = string.Empty;
 
     public event EventHandler? OverlayShown;
@@ -154,8 +155,7 @@ public partial class OverlayWindow : Window
         StealForeground();
 
         // Re-inject styles every time the overlay is shown.
-        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_zoomPct));
-        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildSettingsButtonScript());
+        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
 
         OverlayShown?.Invoke(this, EventArgs.Empty);
         _logger.LogDebug("Overlay shown");
@@ -265,70 +265,80 @@ public partial class OverlayWindow : Window
             PInvoke.AttachThreadInput(fgThread, uiThread, false);
     }
 
+    public void ApplyOpacity(double value)
+    {
+        _opacity = Math.Clamp(value, 0.1, 1.0);
+        _logger.LogDebug("ApplyOpacity: {Opacity:F2}", _opacity);
+        if (_webViewReady)
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+    }
+
     public void ApplyZoom(int zoomPct)
     {
         _zoomPct = Math.Clamp(zoomPct, 10, 200);
         _logger.LogDebug("ApplyZoom: {Zoom}%", _zoomPct);
         if (_webViewReady)
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_zoomPct));
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
     }
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         var msg = e.TryGetWebMessageAsString();
 
+        // Plain string messages
         if (msg == "open-settings")
         {
             Dispatcher.Invoke(() => SettingsRequested?.Invoke(this, EventArgs.Empty));
             return;
         }
 
-        // Drag delta from JS frame-border drag handler — move the window.
-        if (msg.StartsWith('{'))
+        // JSON messages: drag, opacity, zoom
+        if (!msg.StartsWith('{')) return;
+
+        try
         {
-            try
+            using var doc  = System.Text.Json.JsonDocument.Parse(msg);
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("type", out var t)) return;
+
+            switch (t.GetString())
             {
-                using var doc  = System.Text.Json.JsonDocument.Parse(msg);
-                var root = doc.RootElement;
-                if (root.TryGetProperty("type", out var t) && t.GetString() == "drag")
-                {
+                case "drag":
                     var dx = root.GetProperty("dx").GetDouble();
                     var dy = root.GetProperty("dy").GetDouble();
                     Dispatcher.Invoke(() => { Left += dx; Top += dy; });
-                }
+                    break;
+
+                case "opacity":
+                    var opacity = root.GetProperty("value").GetDouble();
+                    Dispatcher.Invoke(() => ApplyOpacity(opacity));
+                    break;
+
+                case "zoom":
+                    var pct = root.GetProperty("pct").GetInt32();
+                    Dispatcher.Invoke(() => ApplyZoom(pct));
+                    break;
             }
-            catch (Exception ex)
-            {
-                _logger.LogDebug("Unhandled web message: {Ex}", ex.Message);
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug("Unhandled web message: {Ex}", ex.Message);
         }
     }
 
-    private static string BuildOverlayStyleScript(int zoomPct) =>
+    // CSS opacity on the html element is the correct approach for WebView2 —
+    // Window.Opacity and SetLayeredWindowAttributes both fail because WebView2's
+    // DirectComposition surface bypasses the host window's alpha channel.
+    // CSS opacity runs inside Chromium's GPU compositor and correctly blends
+    // the page against the transparent WPF window background.
+    private static string BuildOverlayStyleScript(double opacity, int zoomPct) =>
         $"(function(){{" +
         $"var s=document.getElementById('__ol_style');" +
         $"if(!s){{s=document.createElement('style');s.id='__ol_style';" +
         $"(document.head||document.documentElement).appendChild(s);}}" +
         $"s.textContent='html,body{{background:transparent!important}}" +
-        $"html{{zoom:{zoomPct}%!important}}';" +
+        $"html{{opacity:{opacity:F3}!important;zoom:{zoomPct}%!important}}';" +
         $"}})();";
-
-    private static string BuildSettingsButtonScript() =>
-        "(function(){" +
-        "if(document.getElementById('__ol_settings_btn'))return;" +
-        "var b=document.createElement('div');" +
-        "b.id='__ol_settings_btn';" +
-        "b.textContent='\u2699';" +
-        "b.style.cssText='position:fixed;bottom:14px;right:14px;width:108px;height:108px;" +
-            "background:rgba(0,0,0,0.45);color:red;font-size:60px;" +
-            "display:flex;align-items:center;justify-content:center;" +
-            "border-radius:18px;cursor:pointer;z-index:2147483647;" +
-            "opacity:0.6;transition:opacity 0.15s;user-select:none;';" +
-        "b.addEventListener('mouseover',function(){b.style.opacity='1';});" +
-        "b.addEventListener('mouseout',function(){b.style.opacity='0.4';});" +
-        "b.addEventListener('click',function(){window.chrome.webview.postMessage('open-settings');});" +
-        "document.body.appendChild(b);" +
-        "})();";
 
     // -------------------------------------------------------------------------
     // Global mouse hook — WH_MOUSE_LL intercepts WM_MOUSEWHEEL system-wide.
@@ -541,8 +551,7 @@ public partial class OverlayWindow : Window
         {
             _webViewReady = true;
             _navigationErrorShown = false;
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_zoomPct));
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildSettingsButtonScript());
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
             return;
         }
 

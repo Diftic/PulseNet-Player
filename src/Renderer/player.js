@@ -148,6 +148,76 @@
     }
   }, 2000);
 
+  // ---- Settings panel ----
+  // Opacity slider maps 0–100% display → 50–100% actual (CSS opacity on html).
+  // Human eyes perceive < 50% opacity as unusably faint on a monitor.
+  var dragLocked     = false;
+  var currentOpacity = 1.0;   // CSS opacity value sent to C#
+  var currentZoom    = 100;   // zoom % sent to C#
+
+  var settingsBtn    = document.getElementById('settings-btn');
+  var settingsPanel  = document.getElementById('settings-panel');
+  var lockBtn        = document.getElementById('lock-btn');
+  var opacitySlider  = document.getElementById('opacity-slider');
+  var opacityVal     = document.getElementById('opacity-val');
+  var zoomSlider     = document.getElementById('zoom-slider');
+  var zoomVal        = document.getElementById('zoom-val');
+  var hotkeyBtn      = document.getElementById('hotkey-btn');
+
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      settingsPanel.classList.toggle('hidden');
+    });
+  }
+
+  if (lockBtn) {
+    lockBtn.addEventListener('click', function () {
+      dragLocked = !dragLocked;
+      lockBtn.textContent = dragLocked ? '\uD83D\uDD12 Locked' : '\uD83D\uDD13 Unlocked';
+      lockBtn.classList.toggle('locked', dragLocked);
+    });
+  }
+
+  if (opacitySlider) {
+    opacitySlider.addEventListener('input', function () {
+      var pct = parseInt(this.value, 10);
+      opacityVal.textContent = pct + '%';
+      // Map display 0–100% → actual opacity 0.50–1.00
+      currentOpacity = 0.50 + (pct / 100) * 0.50;
+      try {
+        window.chrome.webview.postMessage(JSON.stringify({ type: 'opacity', value: currentOpacity }));
+      } catch (_) {}
+    });
+  }
+
+  if (zoomSlider) {
+    zoomSlider.addEventListener('input', function () {
+      currentZoom = parseInt(this.value, 10);
+      zoomVal.textContent = currentZoom + '%';
+      try {
+        window.chrome.webview.postMessage(JSON.stringify({ type: 'zoom', pct: currentZoom }));
+      } catch (_) {}
+    });
+  }
+
+  if (hotkeyBtn) {
+    hotkeyBtn.addEventListener('click', function () {
+      try {
+        window.chrome.webview.postMessage('open-settings');
+      } catch (_) {}
+    });
+  }
+
+  // Close panel on click outside
+  document.addEventListener('click', function (e) {
+    if (settingsPanel && !settingsPanel.classList.contains('hidden')) {
+      if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+        settingsPanel.classList.add('hidden');
+      }
+    }
+  });
+
   // ---- Window drag — frame border areas only ----
   // Sends dx/dy deltas to C# via WebView2 postMessage so the host window moves.
   var isDragging = false;
@@ -155,6 +225,9 @@
 
   document.addEventListener('mousedown', function (e) {
     if (e.button !== 0) return;
+    // Skip interactive elements — buttons, sliders, settings panel
+    if (e.target.closest && e.target.closest('#settings-btn, #settings-panel, .station-btn')) return;
+    if (dragLocked) return;
     if (isDraggableArea(e.clientX, e.clientY)) {
       isDragging = true;
       lastDrag   = { x: e.screenX, y: e.screenY };

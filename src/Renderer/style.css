@@ -166,3 +166,132 @@ html, body {
 .station-btn.active .station-num {
   color: #22d3ee;
 }
+
+/* ---- Layer 5: Settings button ---- */
+#settings-btn {
+  position: absolute;
+  left: 601px;
+  top: 616px;
+  width: 50px;
+  height: 10px;
+  z-index: 5;
+  pointer-events: auto;
+  background: rgba(0, 15, 35, 0.60);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: 2px;
+  color: rgba(34, 211, 238, 0.60);
+  font-family: 'Consolas', monospace;
+  font-size: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#settings-btn:hover {
+  background: rgba(34, 211, 238, 0.10);
+  border-color: rgba(34, 211, 238, 0.55);
+  color: #22d3ee;
+}
+
+/* ---- Settings panel — appears above the settings button ---- */
+#settings-panel {
+  position: absolute;
+  left: 501px;
+  bottom: 30px; /* bottom of panel = top of #settings-btn (646 − 616 = 30) */
+  width: 250px;
+  z-index: 6;
+  pointer-events: auto;
+  background: rgba(0, 10, 25, 0.90);
+  border: 1px solid rgba(34, 211, 238, 0.30);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+}
+
+#settings-panel.hidden {
+  display: none;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-label {
+  width: 50px;
+  flex-shrink: 0;
+  font-family: 'Consolas', monospace;
+  font-size: 8px;
+  color: rgba(34, 211, 238, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.settings-val {
+  width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: 'Consolas', monospace;
+  font-size: 8px;
+  color: #22d3ee;
+}
+
+.settings-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 3px;
+  background: rgba(34, 211, 238, 0.18);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22d3ee;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(34, 211, 238, 0.50);
+}
+
+.settings-action-btn {
+  width: 100%;
+  height: 20px;
+  background: rgba(0, 15, 35, 0.55);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 3px;
+  color: rgba(34, 211, 238, 0.75);
+  font-family: 'Consolas', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.settings-action-btn:hover {
+  background: rgba(34, 211, 238, 0.10);
+  border-color: rgba(34, 211, 238, 0.55);
+  color: #22d3ee;
+}
+
+.settings-action-btn.locked {
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.80);
+  color: #22d3ee;
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.20);
+}

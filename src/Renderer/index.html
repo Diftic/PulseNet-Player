@@ -24,6 +24,28 @@
     <div id="stations-left"  class="station-col"></div>
     <div id="stations-right" class="station-col"></div>
 
+    <!-- Layer 5: Settings button + panel -->
+    <button id="settings-btn">Settings Menu</button>
+
+    <div id="settings-panel" class="hidden">
+      <div class="settings-row">
+        <button id="lock-btn" class="settings-action-btn">&#x1F513; Unlocked</button>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Opacity</span>
+        <input type="range" id="opacity-slider" class="settings-slider" min="20" max="100" value="100">
+        <span class="settings-val" id="opacity-val">100%</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Zoom</span>
+        <input type="range" id="zoom-slider" class="settings-slider" min="50" max="150" value="100">
+        <span class="settings-val" id="zoom-val">100%</span>
+      </div>
+      <div class="settings-row">
+        <button class="settings-action-btn" id="hotkey-btn">Change Hotkey</button>
+      </div>
+    </div>
+
   </div>
 
   <script src="stations.js"></script>
