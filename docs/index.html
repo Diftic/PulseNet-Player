@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PulseNet Radio — 18 Stations. One Overlay. The 'Verse Always Has a Soundtrack.</title>
+  <meta name="description" content="PulseNet Radio brings 18 curated stations directly into your Star Citizen session as a sci-fi overlay. No alt-tab. One keypress. Always broadcasting." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #06080f;
+      --bg2:          #090c16;
+      --surface:      #0c0f1e;
+      --surface2:     #121628;
+      --surface3:     #191e38;
+      --border:       #161a30;
+      --border-lt:    #252d52;
+      --text:         #cdd9e5;
+      --text-dim:     #7b8faa;
+      --accent:       #22d3ee;
+      --accent-lt:    #67e8f9;
+      --accent-glow:  rgba(34, 211, 238, .18);
+      --radius:       8px;
+      --radius-lg:    14px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-lt); text-decoration: underline; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 0 28px; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(6, 8, 15, .92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+    }
+    .nav-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo img { height: 24px; width: auto; }
+    .nav-logo:hover { text-decoration: none; color: var(--accent); }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      list-style: none;
+    }
+    .nav-links a { font-size: 0.875rem; color: var(--text-dim); text-decoration: none; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-cta {
+      background: var(--surface3);
+      border: 1px solid var(--border-lt);
+      color: var(--accent) !important;
+      font-weight: 700;
+      font-size: 0.8rem !important;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .nav-cta:hover { border-color: var(--accent); text-decoration: none !important; }
+    @media (max-width: 600px) { .nav-links { display: none; } }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 88px 28px 64px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,.18) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 12%, rgba(255,255,255,.16) 0%, transparent 100%),
+        radial-gradient(1px 1px at 35% 70%, rgba(255,255,255,.16) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 50%, rgba(255,255,255,.13) 0%, transparent 100%),
+        radial-gradient(1px 1px at 22% 42%, rgba(255,255,255,.16) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 75%, rgba(255,255,255,.13) 0%, transparent 100%),
+        radial-gradient(1px 1px at 55% 85%, rgba(255,255,255,.11) 0%, transparent 100%),
+        radial-gradient(1px 1px at 42% 28%, rgba(255,255,255,.14) 0%, transparent 100%),
+        radial-gradient(1px 1px at 78% 88%, rgba(255,255,255,.12) 0%, transparent 100%),
+        radial-gradient(ellipse 70% 50% at 50% 0%, rgba(34, 211, 238, .06) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(34, 211, 238, .08);
+      border: 1px solid rgba(34, 211, 238, .2);
+      color: var(--accent-lt);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-eyebrow .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+      50%       { opacity: .5; box-shadow: 0 0 4px var(--accent); }
+    }
+    .hero h1 {
+      font-size: clamp(1.9rem, 5vw, 3.1rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .hero h1 .highlight {
+      background: linear-gradient(90deg, var(--accent), var(--accent-lt));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--text-dim);
+      max-width: 580px;
+      margin: 0 auto 36px;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .btn-coming-soon {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 14px 32px;
+      border-radius: var(--radius);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      box-shadow: 0 0 28px rgba(34, 211, 238, .15), inset 0 0 20px rgba(34, 211, 238, .04);
+      cursor: default;
+      text-decoration: none;
+    }
+    .btn-coming-soon .btn-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulse-dot 1.8s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: transparent;
+      border: 1px solid var(--border-lt);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 13px 28px;
+      border-radius: var(--radius);
+      transition: border-color .15s, color .15s;
+      text-decoration: none;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+    .btn-secondary svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+    .hero-meta { font-size: 0.82rem; color: var(--text-dim); margin-top: 8px; }
+
+    /* ── HERO SCREENSHOT ── */
+    .hero-screenshot {
+      margin: 52px auto 0;
+      max-width: 860px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-lt);
+      box-shadow:
+        0 0 0 1px rgba(34,211,238,.08),
+        0 8px 64px rgba(0,0,0,.6),
+        0 0 80px rgba(34,211,238,.06);
+    }
+    .hero-screenshot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 28px;
+    }
+    .stats-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 36px;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .stat-lbl { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+    @media (max-width: 540px) {
+      .stat { padding: 8px 18px; border-right: none; border-bottom: 1px solid var(--border); width: 50%; }
+    }
+
+    /* ── SECTIONS ── */
+    section { padding: 72px 0; border-bottom: 1px solid var(--border); }
+    .section-header { text-align: center; margin-bottom: 48px; }
+    .section-eyebrow {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 10px;
+    }
+    .section-header h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.4px;
+    }
+    .section-header p { color: var(--text-dim); max-width: 520px; margin: 12px auto 0; font-size: 0.95rem; }
+
+    /* ── FEATURE GRID ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      transition: border-color .2s, background .2s;
+    }
+    .feature-card:hover { border-color: var(--border-lt); background: var(--surface2); }
+    .feat-icon {
+      width: 42px; height: 42px;
+      border-radius: var(--radius);
+      background: var(--surface3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 14px;
+    }
+    .feature-card h3 { font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .feature-card p  { font-size: 0.855rem; color: var(--text-dim); line-height: 1.55; }
+
+    /* ── STATION GRID ── */
+    .station-table-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) { .station-table-wrap { grid-template-columns: 1fr; } }
+    .station-col-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .station-col-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-dim);
+    }
+    .station-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .station-row:last-child { border-bottom: none; }
+    .station-row:hover { background: var(--surface2); }
+    .station-name { font-size: 0.875rem; font-weight: 600; color: #fff; flex-shrink: 0; }
+    .station-genre { font-size: 0.775rem; color: var(--text-dim); }
+    .station-tagline { font-size: 0.775rem; color: var(--accent); margin-left: auto; text-align: right; white-space: nowrap; flex-shrink: 0; }
+
+    /* ── STEPS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 22px;
+    }
+    .step-num {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
+      color: #000;
+      font-weight: 800;
+      font-size: 0.95rem;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+      box-shadow: 0 0 16px rgba(34, 211, 238, .28);
+    }
+    .step-card h3 { font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 8px; }
+    .step-card p  { font-size: 0.855rem; color: var(--text-dim); line-height: 1.55; }
+
+    /* ── CONFIG TABLE ── */
+    .config-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .config-table th {
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+    }
+    .config-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+      vertical-align: top;
+    }
+    .config-table tr:last-child td { border-bottom: none; }
+    .config-table tr:hover td { background: var(--surface); }
+    .config-table td:first-child { color: var(--accent); font-family: "Consolas", monospace; font-size: 0.84rem; }
+    .config-table td:nth-child(2) { color: var(--text); }
+    .config-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    /* ── NOTES ── */
+    .note-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .note-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid #22d3ee;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      line-height: 1.55;
+    }
+    .note-card strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+    /* ── CODE ── */
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      font-family: "Consolas", "Cascadia Code", monospace;
+      font-size: 0.855rem;
+      overflow-x: auto;
+      color: #cdd9e5;
+      line-height: 1.7;
+    }
+
+    /* ── LORE BANNER ── */
+    .lore-banner {
+      background: linear-gradient(135deg, var(--surface2) 0%, var(--surface3) 100%);
+      border: 1px solid var(--border-lt);
+      border-radius: var(--radius-lg);
+      padding: 44px 40px;
+      text-align: center;
+      margin: 0 0 72px;
+      position: relative;
+      overflow: hidden;
+    }
+    .lore-banner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 120%, rgba(34, 211, 238, .06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .lore-banner .lore-org {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      margin-bottom: 12px;
+    }
+    .lore-banner h2 { font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .lore-banner p  { color: var(--text-dim); font-size: 0.975rem; max-width: 560px; margin: 0 auto; }
+    .lore-banner blockquote {
+      margin: 20px auto 0;
+      max-width: 480px;
+      border-left: 2px solid var(--accent);
+      padding: 0 0 0 16px;
+      text-align: left;
+      font-style: italic;
+      color: var(--accent-lt);
+      font-size: 1rem;
+    }
+
+    /* ── CTA BANNER ── */
+    .cta-banner {
+      background: linear-gradient(135deg, var(--surface2) 0%, var(--surface3) 100%);
+      border: 1px solid var(--border-lt);
+      border-radius: var(--radius-lg);
+      padding: 52px 40px;
+      text-align: center;
+      margin: 72px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-banner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 120%, rgba(34, 211, 238, .06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-banner h2 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 700; color: #fff; margin-bottom: 12px; }
+    .cta-banner p  { color: var(--text-dim); font-size: 0.975rem; max-width: 440px; margin: 0 auto 28px; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--border); padding: 32px 28px; text-align: center; }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .footer-links a { color: var(--text-dim); font-size: 0.875rem; text-decoration: none; }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+    .footer-legal { font-size: 0.78rem; color: var(--text-dim); opacity: .6; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <img src="main_logo.png" alt="PulseNet Radio">
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#stations">Stations</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#source">Source</a></li>
+        <li><a href="https://github.com/Diftic/pulsenet-radio" target="_blank">GitHub</a></li>
+        <li><a class="nav-cta" href="#coming-soon">Coming Soon</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero" id="coming-soon">
+    <div class="container">
+      <div class="hero-eyebrow">
+        <span class="dot"></span>
+        Star Citizen Companion &nbsp;·&nbsp; Free &amp; Open Source
+      </div>
+      <h1>
+        18 Stations. One Overlay.<br>
+        <span class="highlight">The 'Verse Always Has a Soundtrack.</span>
+      </h1>
+      <p class="hero-sub">
+        PulseNet Radio is a sci-fi framed YouTube overlay that lives at the edge of your screen.
+        A full broadcast network — curated stations, one keypress away — without ever leaving your game.
+      </p>
+      <div class="hero-actions">
+        <div class="btn-coming-soon">
+          <span class="btn-dot"></span>
+          Coming Soon
+        </div>
+        <a class="btn-secondary" href="https://github.com/Diftic/pulsenet-radio" target="_blank">
+          <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+      <p class="hero-meta">Windows 10 / 11 &nbsp;·&nbsp; No installer &nbsp;·&nbsp; WebView2 required (pre-installed on Win 11)</p>
+
+      <div class="hero-screenshot">
+        <img src="preview.png" alt="PulseNet Radio overlay showing the sci-fi frame with station buttons and a track playing">
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat">
+        <span class="stat-val">18</span>
+        <span class="stat-lbl">Stations</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">F9</span>
+        <span class="stat-lbl">Default Hotkey</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">50+</span>
+        <span class="stat-lbl">Years on Air</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">Win 10/11</span>
+        <span class="stat-lbl">Platform</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="section-header">
+        <div class="section-eyebrow">What it does</div>
+        <h2>Everything you need, nothing you don't</h2>
+        <p>A focused radio overlay. Pick a station, press your hotkey, fly. PulseNet stays out of the way until you need it.</p>
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feat-icon">📻</div>
+          <h3>18 Curated Stations</h3>
+          <p>Electronic, classical, industrial, hip-hop, country, ambient, live performances, and more. A full broadcast network built for the 'Verse.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">⌨️</div>
+          <h3>Instant Toggle</h3>
+          <p>Press F9 to show or hide the overlay without touching the mouse. Change the hotkey to any combo from the Settings panel.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🖼️</div>
+          <h3>Sci-Fi Frame Overlay</h3>
+          <p>Transparent, always-on-top window styled to fit the Star Citizen aesthetic. Drag it anywhere. Resize from 20% to 100%.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🎨</div>
+          <h3>Station Hover Preview</h3>
+          <p>Hover over any station button to preview its cover art live in the video window before you commit to a switch.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🔒</div>
+          <h3>Lock Mode</h3>
+          <p>Lock the overlay in place to prevent accidental repositioning mid-flight. Unlock any time from the Settings panel.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">💾</div>
+          <h3>Position Memory</h3>
+          <p>The window remembers exactly where you left it. Every session picks up where the last one ended.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🌫️</div>
+          <h3>Adjustable Opacity</h3>
+          <p>Fade the overlay to any level without losing click-through or button interactivity. Set it and forget it.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🖱️</div>
+          <h3>Scroll Passthrough</h3>
+          <p>The scroll wheel is only consumed when your cursor is directly over the overlay. Zero impact on your game controls.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">📥</div>
+          <h3>System Tray</h3>
+          <p>Runs quietly in the background. Right-click the tray icon to toggle the overlay or exit at any time.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATIONS -->
+    <section id="stations">
+      <div class="section-header">
+        <div class="section-eyebrow">The Lineup</div>
+        <h2>Broadcasting across the 'Verse</h2>
+        <p>Eighteen stations. Every genre. Every mood. Every shift.</p>
+      </div>
+      <div class="station-table-wrap">
+        <div class="station-col-card">
+          <div class="station-col-header">Left Column — L1 to L9</div>
+          <div class="station-row">
+            <span class="station-name">Alternative Routes</span>
+            <span class="station-genre">Alt-Rock · Indie</span>
+            <span class="station-tagline">Find a different path.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">CrossWind</span>
+            <span class="station-genre">Cultural Fusion</span>
+            <span class="station-tagline">Where worlds meet.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">DeepSky Ambient</span>
+            <span class="station-genre">Ambient · Chillwave</span>
+            <span class="station-tagline">Drift beyond the noise.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">EchoVerse</span>
+            <span class="station-genre">Indie · Emerging</span>
+            <span class="station-tagline">New voices. New signals.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">FlowState</span>
+            <span class="station-genre">Hip-Hop · Trap</span>
+            <span class="station-tagline">Stay in the flow.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">Frontline Frequency</span>
+            <span class="station-genre">Military · Ceremonial</span>
+            <span class="station-tagline">Honor in every signal.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">HoloStage LIVE</span>
+            <span class="station-genre">Live Performances</span>
+            <span class="station-tagline">Broadcast from the stage.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">IronChord</span>
+            <span class="station-genre">Rock · Metal</span>
+            <span class="station-tagline">Forged in Sound.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">NovaBeat</span>
+            <span class="station-genre">Electronic · Synthwave</span>
+            <span class="station-tagline">Feel the Pulse.</span>
+          </div>
+        </div>
+        <div class="station-col-card">
+          <div class="station-col-header">Right Column — R1 to R9</div>
+          <div class="station-row">
+            <span class="station-name">Pulse Retro</span>
+            <span class="station-genre">Historic · Archives</span>
+            <span class="station-tagline">The past, still playing.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">PulseVision Audio</span>
+            <span class="station-genre">Soundtrack · Cinematic</span>
+            <span class="station-tagline">Hear the story.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">Quantum Drive</span>
+            <span class="station-genre">High-Energy Electronic</span>
+            <span class="station-tagline">Engage the rhythm.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">Solaris Classical</span>
+            <span class="station-genre">Classical · Orchestral</span>
+            <span class="station-tagline">Timeless. Boundless.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">Spectrum Beats</span>
+            <span class="station-genre">Pop · Chart-Toppers</span>
+            <span class="station-tagline">Trending across the 'Verse.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">Starlight Lounge</span>
+            <span class="station-genre">Jazz · Lounge</span>
+            <span class="station-tagline">Ease into the night.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">The Cargo Deck</span>
+            <span class="station-genre">Spacer Talk · Mixed</span>
+            <span class="station-tagline">You're not flying solo.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">The Foundry</span>
+            <span class="station-genre">Industrial · Rhythmic</span>
+            <span class="station-tagline">Keep the line moving.</span>
+          </div>
+          <div class="station-row">
+            <span class="station-name">Trailstar</span>
+            <span class="station-genre">Frontier Country · Folk</span>
+            <span class="station-tagline">Songs for the Long Run.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works">
+      <div class="section-header">
+        <div class="section-eyebrow">The process</div>
+        <h2>On air in under a minute</h2>
+        <p>No installer, no configuration wizard — download, run, press F9.</p>
+      </div>
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h3>Download &amp; Run</h3>
+          <p>Download <code>pulsenet.exe</code> and run it. No installation required. WebView2 is pre-installed on Windows 11.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h3>Position the Overlay</h3>
+          <p>Drag the sci-fi frame to where it suits your setup. Resize and adjust opacity from the Settings panel.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h3>Launch Your Game</h3>
+          <p>Start Star Citizen. PulseNet sits in the system tray, waiting.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <h3>Press F9</h3>
+          <p>The overlay appears. Pick a station from the buttons on either side of the frame.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">5</div>
+          <h3>Press F9 Again</h3>
+          <p>Overlay hides. Music keeps playing. You never stopped flying.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="configuration">
+      <div class="section-header">
+        <div class="section-eyebrow">Settings</div>
+        <h2>Configure it your way</h2>
+        <p>All settings are accessible from the in-overlay Settings panel. Stored in <code>%APPDATA%\pulsenet-radio\settings.json</code>.</p>
+      </div>
+      <div class="config-wrap">
+        <table class="config-table">
+          <thead>
+            <tr>
+              <th>Setting</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ToggleHotkey</td>
+              <td>F9</td>
+              <td>Key combination to show and hide the overlay.</td>
+            </tr>
+            <tr>
+              <td>WindowOpacity</td>
+              <td>100%</td>
+              <td>Overlay transparency. Adjustable from 20% to 100%.</td>
+            </tr>
+            <tr>
+              <td>WindowScale</td>
+              <td>100%</td>
+              <td>Overlay size. Scale from 20% to 100% of the full frame. Window resizes with content.</td>
+            </tr>
+            <tr>
+              <td>WindowLeft / WindowTop</td>
+              <td>Centred</td>
+              <td>Last known position. Restored on next launch. Defaults to screen centre on first run.</td>
+            </tr>
+            <tr>
+              <td>DragLocked</td>
+              <td>false</td>
+              <td>Prevents the overlay from being repositioned by dragging. Toggle from the Settings panel.</td>
+            </tr>
+            <tr>
+              <td>YoutubeChannelId</td>
+              <td>UCIMaIJsfJEMi5yJIe5nAb0g</td>
+              <td>The PulseNet YouTube channel. Used to build the uploads playlist ID automatically.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- NOTES -->
+    <section id="notes">
+      <div class="section-header">
+        <div class="section-eyebrow">Good to know</div>
+        <h2>Notes &amp; requirements</h2>
+      </div>
+      <div class="note-grid">
+        <div class="note-card">
+          <strong>WebView2 Runtime required</strong>
+          Windows 11 ships with WebView2 pre-installed. Windows 10 users may need to download the
+          Microsoft Edge WebView2 Runtime separately before running PulseNet Radio.
+        </div>
+        <div class="note-card">
+          <strong>Internet connection required</strong>
+          All station audio streams from YouTube via the YouTube IFrame API. An active internet
+          connection is required during use.
+        </div>
+        <div class="note-card">
+          <strong>EAC compatibility</strong>
+          PulseNet Radio does not inject into the game or modify game memory. It is a standalone
+          overlay using a separate WebView2 window positioned on top of the game.
+        </div>
+        <div class="note-card">
+          <strong>YouTube controls</strong>
+          The YouTube player is embedded via the official IFrame API. YouTube share and
+          logo buttons cannot be removed due to cross-origin iframe restrictions and Terms of Service.
+        </div>
+      </div>
+    </section>
+
+    <!-- LORE -->
+    <div class="lore-banner">
+      <div class="lore-org">The Exelus Corporation &nbsp;·&nbsp; Entertainment Division</div>
+      <h2>Broadcasting Since 2905</h2>
+      <p>
+        The Pulse Broadcasting Network has been one of the UEE's largest entertainment broadcast
+        networks for over 50 years. Eighteen stations. Every genre. Every corner of the 'Verse.
+        Staffed by DJs with real histories rooted in the worlds they broadcast from.
+      </p>
+      <blockquote>
+        "The 'Verse always has a soundtrack."
+      </blockquote>
+    </div>
+
+    <!-- FROM SOURCE -->
+    <section id="source">
+      <div class="section-header">
+        <div class="section-eyebrow">Developers</div>
+        <h2>Run from source</h2>
+      </div>
+      <pre><code>git clone https://github.com/Diftic/pulsenet-radio
+cd pulsenet-radio
+dotnet build src/pulsenet.csproj
+dotnet run --project src/pulsenet.csproj</code></pre>
+      <p style="margin-top: 14px; color: var(--text-dim); font-size: 0.875rem;">
+        Requires .NET 9 SDK and Windows 10 / 11 x64.
+      </p>
+    </section>
+
+    <!-- CTA BANNER -->
+    <div class="cta-banner">
+      <h2>Ready to tune in?</h2>
+      <p>PulseNet Radio is coming soon. Follow the GitHub repo for release notifications.</p>
+      <div style="display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;">
+        <div class="btn-coming-soon">
+          <span class="btn-dot"></span>
+          Coming Soon
+        </div>
+        <a class="btn-secondary" href="https://github.com/Diftic/pulsenet-radio" target="_blank">
+          <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          Watch on GitHub
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/Diftic/pulsenet-radio" target="_blank">GitHub</a>
+        <a href="https://github.com/Diftic/pulsenet-radio/releases" target="_blank">Releases</a>
+        <a href="https://github.com/Diftic/pulsenet-radio/issues" target="_blank">Report a Bug</a>
+      </div>
+      <p class="footer-legal">
+        Built by The Exelus Corporation
+        &nbsp;·&nbsp;
+        Not affiliated with Cloud Imperium Games or Roberts Space Industries.
+        &nbsp;·&nbsp;
+        Star Citizen® is a registered trademark of Cloud Imperium Rights LLC.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
