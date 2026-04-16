@@ -4,108 +4,85 @@
 
 ---
 
-## 2026-03-30 — v0.1.0 — Initial project setup
+## 2026-04-16 — Session 3 — Special buttons, offline states, mouse hook fix
 
-**Cloned from SC-HUD** and transitioned into a standalone YouTube overlay player.
+### Special utility buttons
+Two new buttons added outside the station columns:
+- **PulseNet home button** (top-left): uses `pulsenet_icon.png`, plays the live stream `videoId: 'b-YcZMSKqeo'` directly in the player. Link moved here from l1 (Alternative Routes), which reverts to a standard playlist station.
+- **Info button** (bottom-right): text-only ("Info", 8px Consolas), shows `info.png` on hover. Sends `{type:'about'}` to C# on click for future wiring.
 
-### What this is
-A .NET 9 WPF overlay app (Windows, always-on-top, transparent) with an embedded WebView2 pane. Instead of loading scbridge.app, it serves a locally bundled HTML/CSS/JS YouTube IFrame player from a virtual hostname (`pulsenet.local` → `Renderer/` folder next to exe).
+### Button sizing and column alignment
+- Station buttons reduced from 38×38px to 32×32px DOM (renders ~39×39px with scale 1.23).
+- Columns re-centred: mid-gap between items 5 and 6 (counting special buttons as part of the column) aligned to video vertical centre (y=316.5px).
+  - Left col: `top: 129px` (home button counts as item 1, stations as 2–10)
+  - Right col: `top: 80px` (stations 1–9, info button as item 10)
+  - Special buttons spaced one gap (17px) from the nearest station button.
 
-### Architecture decisions
+### Station hover preview masked by frame
+`#station-preview` z-index lowered from 4 → 1, placing it behind the frame overlay. Previously it rendered above the frame and bled outside the cutout. Now it's masked by the frame the same way the idle logo and video are.
 
-**Virtual host instead of `file://`**
-YouTube IFrame API requires the host page to be served over HTTPS. WebView2's `SetVirtualHostNameToFolderMapping` maps `https://pulsenet.local/` to the local `Renderer/` folder, satisfying this requirement without a real server.
+### Offline station images
+- `live` flag added to every station entry in `stations.js` (all currently `false`).
+- Hover preview auto-derives `Offline_<filename>` path when `live: false`; uses regular icon when `live: true`.
+- All 18 `Offline_` images created, deployed to `Renderer/assets/stations/`.
+- To bring a station live: set `live: true` and replace the placeholder `playlistId`.
 
-**Channel ID via URL query param**
-The C# side navigates to `https://pulsenet.local/index.html?channelId=UCxxxxxx`. The JS reads `URLSearchParams` on load. When the user changes the channel ID in Settings, the app re-navigates with the new param. This keeps the C#/JS boundary clean — no custom messaging protocol needed for the core flow.
+### Mouse hook — no longer blocks system scroll when overlay hidden
+`WH_MOUSE_LL` was installed at app startup and ran for the entire process lifetime, adding latency to all mouse events globally even when the overlay was hidden. Refactored: hook is now installed in `ShowOverlay()` and uninstalled in `HideOverlay()`. Zero system-wide impact when the overlay is off.
 
-**Uploads playlist auto-derivation**
-Every YouTube channel has an auto-generated uploads playlist with ID `UU` + `channelId[2:]` (swap the `UC` prefix). The player loads this by default so no manual playlist config is needed to get started.
-
-**OAuth/sign-in via existing popup mechanism**
-YouTube IFrame handles its own sign-in. Any `window.open()` from within the iframe goes through the existing `OnNewWindowRequested` handler, which opens a shared-environment WebView2 popup. Auth cookies end up in the same user data folder (`%APPDATA%\pulsenet-radio\WebView2Cache`) and persist across restarts.
-
-**`IsAllowedOrigin` is `pulsenet.local` only**
-Main-frame navigation is locked to the virtual host. Any other origin (YouTube, Google OAuth redirect) is intercepted in `OnNavigationStarting` and opened as a popup. YouTube iframe content is in a child frame, so it doesn't trigger this filter.
-
-### What was stripped from SC-HUD
-
-| Removed | Reason |
-|---------|--------|
-| `ScAnchorService.cs` | Watched for `StarCitizen.exe` focus/minimize — no game to anchor to |
-| `OverlayUrl` setting | Replaced by `YoutubeChannelId` |
-| Environment toggle (Ctrl+Shift+D) | Was a prod/staging scbridge.app switcher |
-| SC-specific error messages | Irrelevant |
-| `SelfUpdateService` (stub) | Kept but `schud.exe` refs updated to `pulsenet.exe` |
-
-### What was kept
-
-All overlay infrastructure is 100% reused: WebView2 transparency, mouse hook for scroll forwarding, focus stealing, F3 hotkey, ESC close, settings window (redesigned), splash screen, system tray, auto-start, self-update flow.
-
-### Settings model changes
-
-`PulsenetSettings` (was `SchudSettings`):
-- Removed: `OverlayUrl`
-- Added: `YoutubeChannelId` (default: empty string)
-- Kept: `ToggleHotkey`, `WebViewWidthPct`, `WebViewHeightPct`, `WebViewZoomPct`, `AutoStartWithWindows`, `InstallationId`
-
-### File inventory
-
-```
-pulsenet-radio/
-├── src/
-│   ├── App.xaml / App.xaml.cs       — lifecycle, DI, window wiring
-│   ├── Constants.cs                  — app name, GUID, folder names, virtual host
-│   ├── Program.cs                    — entry point, single-instance mutex
-│   ├── app.manifest                  — PerMonitorV2 DPI awareness
-│   ├── pulsenet.csproj
-│   ├── Assets/
-│   │   ├── icon.ico                  — placeholder (SC-HUD icon)
-│   │   └── logo.png                  — placeholder (SC-HUD logo)
-│   ├── Models/
-│   │   ├── PulsenetSettings.cs
-│   │   └── Keyboard/                 — hotkey binding model (unchanged from SC-HUD)
-│   ├── PInvoke/                      — Win32 wrappers (unchanged)
-│   ├── Renderer/                     — NEW: local HTML/CSS/JS YouTube player
-│   │   ├── index.html
-│   │   ├── style.css
-│   │   └── player.js
-│   ├── Services/
-│   │   ├── AutoStartManager.cs       — Windows startup registry
-│   │   ├── GlobalHotkeyListener.cs   — WH_KEYBOARD_LL hook, F3 + ESC
-│   │   ├── SelfUpdateService.cs      — exe/MSI swap updater
-│   │   └── UpdateChecker.cs          — GitHub releases API (URL is placeholder)
-│   ├── Settings/
-│   │   └── SettingsManager.cs        — JSON persistence to %APPDATA%\pulsenet-radio\
-│   └── UI/
-│       ├── OverlayWindow.xaml/cs     — WebView2 overlay, virtual host init
-│       ├── SettingsWindow.xaml/cs    — channel ID field replaces URL/env fields
-│       ├── SplashWindow.xaml/cs      — startup splash
-│       ├── TrayIcon.cs               — system tray
-│       └── WpfKeyMapper.cs           — WPF Key → KeyboardKey
-├── Directory.Build.props
-├── Directory.Packages.props
-└── pulsenet.slnx
-```
+### Minor layout tweaks
+- Video window and preview rect shifted down 1px (`top: 101px`) for better frame alignment.
+- Settings Menu button moved up 5px (`top: 581px`).
 
 ---
 
-## 2026-03-30 — Simplify overlay: remove opacity, transparent background
+## 2026-04-14 — Session 2 — UI polish, drag overhaul, zoom, channel wired
 
-The overlay was inherited from SC-HUD which had a fullscreen semi-transparent backdrop to darken the game world behind it. That's not appropriate for a radio player — the overlay should sit on top of whatever you're doing without covering it.
+### Drag system rebuilt (WH_MOUSE_LL → JS-initiated)
+Previous drag implementation used a geometric exclusion zone in the C# hook to decide what was draggable. This broke at non-100% zoom because CSS zoom scaled visuals but not the WPF window, causing coordinate mismatches. Full rewrite:
 
-**Changes:**
+- **JS is authoritative:** `mousedown` listener walks the DOM — if the click is not on a button, input, video area, or settings panel, it sends `{type:'startDrag'}` to C#.
+- **C# hook tracks last cursor position** (volatile fields) so it can reconstruct the drag origin when the JS message arrives.
+- **WH_MOUSE_LL handles MOUSEMOVE and LBUTTONUP** — moves window via `SetWindowPos(SWP_ASYNCWINDOWPOS)`, syncs WPF `Left`/`Top` on release.
+- Result: entire frame is draggable except buttons, video area, and settings panel. Works correctly at all zoom levels.
 
-- Removed `OverlayOpacity` and `BackgroundOpacity` from `PulsenetSettings` — the overlay runs at full opacity, always
-- Removed `ApplyOpacity` and `ApplyBackgroundOpacity` from `OverlayWindow` — including the CSS `opacity` injection hack (was needed because WebView2's DirectComposition surface bypasses `Window.Opacity`; no longer relevant)
-- `BuildOverlayStyleScript` simplified to zoom-only; still injects `background:transparent` on `html,body` so the renderer's own background doesn't block anything
-- `OverlayWindow.xaml` background changed from `#1a1a1a @ 5%` to `Transparent` — with `AllowsTransparency="True"`, WPF passes clicks through fully transparent pixels, so everything outside the WebView2 widget is now click-through
-- Removed Opacity and Background Opacity sliders from `SettingsWindow.xaml`; window height shrunk from 580 → 460 accordingly
-- `SettingsWindow` constructor signature simplified (dropped `opacityPreview` and `bgOpacityPreview` callbacks)
+### Zoom: window resizes with content
+`ApplyZoom` now resizes the WPF window proportionally (`Width = FrameDisplayWidth * factor`, `Height = FrameDisplayHeight * factor`) and sets `WebView.ZoomFactor` in the same call. Previously CSS `zoom` was used, which caused blink and coordinate mismatches. Zoom range: 20–100%.
 
-**Result:** The fullscreen WPF window still covers the primary display, but only the WebView2 widget itself is visible and interactive. All surrounding area is invisible and click-through.
+### Zoom controls replaced
+Zoom slider removed. Replaced with: `-10% size` button · number input (20–100) · `+10% size` button. Eliminates blink issues the slider had.
 
----
+### Settings panel doubled
+Font sizes doubled (8→16px), panel width 250→500px, button heights 20→40px, border-radius 6→12px.
+
+### Window position persistence
+`HideOverlay` saves `WindowLeft`/`WindowTop` to settings. `ShowOverlay` restores them, falls back to center on first run.
+
+### Idle logo
+`main_logo.png` shown in video area when no station is active. Hidden when a station button is clicked. Restored on playlist end with no active station.
+
+### Splash screen
+Logo updated to `main_logo.png` (Pulsenet branding), resized to 225×225px. Layout anchored top with reduced margins so all content is visible.
+
+### Scroll wheel fix
+WH_MOUSE_LL scroll hook now checks if cursor is inside the overlay window rect before consuming the event. Previously captured scroll globally whenever the overlay was visible.
+
+### Frame width trim
+Frame width reduced from 1258px to 1202px (28px each side trimmed) to better fit the frame_base.png visual. All CSS x-coordinates and `Constants.FrameDisplayWidth` updated accordingly. Video area (812×433) unchanged.
+
+### Video fill
+YouTube iframe scaled via `transform: scale(1.055)` to fill pillarbox bars caused by the 812×433 container being wider than 16:9.
+
+### Station playback
+- `stations.js` updated: `videoId` property supported alongside `playlistId` for single-video stations.
+- Top-left station (Alternative Routes) wired to test video `b-YcZMSKqeo`.
+- All 18 station playlist IDs updated to real Pulsenet channel (`UCIMaIJsfJEMi5yJIe5nAb0g` → uploads playlist `UUIMaIJsfJEMi5yJIe5nAb0g`).
+- Default `YoutubeChannelId` in settings updated to `UCIMaIJsfJEMi5yJIe5nAb0g`.
+
+### Assets
+- `icon.ico` replaced with Pulsenet branding — multi-resolution (16, 32, 48, 256px) generated from `PulseNetIcon 1024x1024.png`.
+- `main_logo.png` replaced with resized (812×433) Pulsenet logo for idle state.
+- Stale `logo.png` resource entry removed from `pulsenet.csproj`.
 
 ---
 
@@ -117,10 +94,8 @@ The RadioPlan.md proposal to rewrite in PyQt6 was discarded — no technical jus
 ### Frame asset
 - Source image: `src/Assets/radio_backround.png` — 2515×1292, transparent outside frame
 - Video area cut to fully transparent by user
-- Displayed at 50% → **1258×646** window
-- Video rect within display: `left=220 top=100 width=812 height=433`
-- Left button column: `x=0 y=100 w=220 h=433`
-- Right button column: `x=1032 y=100 w=226 h=433`
+- Displayed at 50% → **1258×646** window (since trimmed to 1202×646)
+- Video rect within display: `left=193 top=100 width=812 height=433`
 
 ### Renderer rebuild (everything visual lives in HTML/CSS/JS)
 WPF airspace problem (WebView2 HWND always renders above WPF visuals) means the frame and buttons cannot be WPF elements. Solution: put everything in the renderer.
@@ -133,26 +108,43 @@ Layer stack (z-index):
 
 ### Station buttons
 - 18 buttons: 9 left column + 9 right column
-- Icon-based; hover shows station name (tooltip)
-- Defined in `Renderer/stations.js` — all pointing to `@Mr_Xul` test channel
-- Clicking a button calls `player.loadPlaylist()` via YouTube IFrame API
+- Icon-based; hover shows full station icon preview over video area
+- Defined in `Renderer/stations.js`
 - Active button gets cyan glow border
 
-### Window changes
-- Fixed size: `Constants.FrameDisplayWidth × FrameDisplayHeight` (1258×646)
-- No longer fullscreen — centered on primary screen on show
-- Drag-to-move: JS detects mousedown on frame border areas, posts `{type:'drag', dx, dy}` to C#, which moves the window via `Left += dx; Top += dy`
-- Removed: `ApplySize`, `WebViewWidthPct`, `WebViewHeightPct`
-- Kept: `ApplyZoom`, zoom slider in settings
+### Window
+- Fixed size: `Constants.FrameDisplayWidth × FrameDisplayHeight` (currently 1202×646)
+- Centered on primary screen on first show; position persisted after that
+- Drag handled via JS `startDrag` → C# WH_MOUSE_LL hook
 
-### Channel ID
-- Test channel: `@Mr_Xul` → `UCDemStdcwUHbqhD2ePbKH6A`
-- Default uploads playlist: `UUDemStdcwUHbqhD2ePbKH6A`
-- Stored in `Constants.DefaultChannelId`
+---
 
-### Remaining before first run
-- `frame_glow.png` — glow-only layer for animation (separate from frame_base)
-- Test build against real YouTube playback
+## 2026-03-30 — v0.1.0 — Initial project setup
+
+**Cloned from SC-HUD** and transitioned into a standalone YouTube overlay player.
+
+### Architecture decisions
+
+**Virtual host instead of `file://`**
+YouTube IFrame API requires the host page to be served over HTTPS. WebView2's `SetVirtualHostNameToFolderMapping` maps `https://pulsenet.local/` to the local `Renderer/` folder, satisfying this requirement without a real server.
+
+**Channel ID via URL query param**
+The C# side navigates to `https://pulsenet.local/index.html?channelId=UCxxxxxx`. The JS reads `URLSearchParams` on load. When the user changes the channel ID in Settings, the app re-navigates with the new param.
+
+**Uploads playlist auto-derivation**
+Every YouTube channel has an auto-generated uploads playlist with ID `UU` + `channelId[2:]` (swap the `UC` prefix).
+
+**OAuth/sign-in via existing popup mechanism**
+Any `window.open()` from within the iframe goes through `OnNewWindowRequested`, which opens a shared-environment WebView2 popup. Auth cookies persist in `%APPDATA%\pulsenet-radio\WebView2Cache`.
+
+### What was stripped from SC-HUD
+
+| Removed | Reason |
+|---------|--------|
+| `ScAnchorService.cs` | SC-specific — no game to anchor to |
+| `OverlayUrl` setting | Replaced by `YoutubeChannelId` |
+| Environment toggle (Ctrl+Shift+D) | Was a prod/staging scbridge.app switcher |
+| SC-specific error messages | Irrelevant |
 
 ---
 

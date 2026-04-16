@@ -7,6 +7,8 @@ using System.Windows.Interop;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 using Models;
+using Models.Keyboard;
+using Services;
 using Settings;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -16,6 +18,7 @@ using Windows.Win32.UI.WindowsAndMessaging;
 public partial class OverlayWindow : Window
 {
     private readonly SettingsManager _settings;
+    private readonly GlobalHotkeyListener _hotkeyListener;
     private readonly ILogger<OverlayWindow> _logger;
 
     private HWND _hwnd;
@@ -33,20 +36,27 @@ public partial class OverlayWindow : Window
     private bool   _webViewReady;
     private bool   _isVisible;
     private bool   _navigationErrorShown;
-    private double _opacity  = 1.0;
-    private int    _zoomPct  = 100;
+    private double _opacity    = 1.0;
+    private int    _zoomPct   = 100;
+    private bool   _dragLocked           = false;
+    private double _dpiScale             = 1.0;
+    private volatile bool _hookDragging  = false;
+    private volatile int  _hookDragStartX, _hookDragStartY;
+    private volatile int  _hookDragWinLeft, _hookDragWinTop;
+    private volatile int  _lastHookMouseX, _lastHookMouseY;
     private string _loadedChannelId = string.Empty;
 
     public event EventHandler? OverlayShown;
     public event EventHandler? OverlayHidden;
-    public event EventHandler? SettingsRequested;
     public event Action<string, string>? BalloonTipRequested;
 
     public OverlayWindow(
         SettingsManager settings,
+        GlobalHotkeyListener hotkeyListener,
         ILogger<OverlayWindow> logger)
     {
         _settings = settings;
+        _hotkeyListener = hotkeyListener;
         _logger = logger;
 
         InitializeComponent();
@@ -79,15 +89,6 @@ public partial class OverlayWindow : Window
             HideOverlay(restoreFocus: false);
     }
 
-    /// <summary>
-    /// Hides and explicitly returns foreground to the previous window — used for ESC-close.
-    /// </summary>
-    public void EnsureHiddenRestoring()
-    {
-        if (_isVisible)
-            HideOverlay(restoreFocus: true);
-    }
-
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
@@ -98,14 +99,15 @@ public partial class OverlayWindow : Window
 
         _hwnd = new HWND(new WindowInteropHelper(this).Handle);
 
+        // Cache DPI scale (physical px per WPF DIP) for coordinate conversion in mouse hook.
+        var src = PresentationSource.FromVisual(this);
+        _dpiScale = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+
         // WndProc hook — catches WM_MOUSEWHEEL when the overlay window itself has focus.
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndProc);
 
-        // Global WH_MOUSE_LL hook — intercepts WM_MOUSEWHEEL regardless of which window
-        // has focus, so scrolling works even when a game holds the foreground lock.
+        // Mouse hook proc delegate kept alive here; thread is started/stopped with the overlay.
         _mouseHookProc = MouseHookProc;
-        _mouseHookThread = new Thread(RunMouseHook) { IsBackground = true, Name = "MouseHook" };
-        _mouseHookThread.Start();
 
         // Hide from Alt+Tab.  Activation prevention is handled in WndProc via
         // WM_MOUSEACTIVATE → MA_NOACTIVATE, and in XAML via ShowActivated="False".
@@ -126,11 +128,7 @@ public partial class OverlayWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _settings.SettingsChanged -= OnSettingsChanged;
-
-        if (_mouseHookThreadId != 0)
-            PInvoke.PostThreadMessage(_mouseHookThreadId, PInvoke.WM_QUIT, 0, 0);
-        _mouseHookHandle?.Dispose();
-
+        StopMouseHook();
         base.OnClosed(e);
     }
 
@@ -146,7 +144,18 @@ public partial class OverlayWindow : Window
             return;
         }
 
-        CenterOnScreen();
+        StartMouseHook();
+
+        var s = _settings.Current;
+        if (s.WindowLeft.HasValue && s.WindowTop.HasValue)
+        {
+            Left = s.WindowLeft.Value;
+            Top  = s.WindowTop.Value;
+        }
+        else
+        {
+            CenterOnScreen();
+        }
 
         _isVisible = true;
         Visibility = Visibility.Visible;
@@ -154,8 +163,10 @@ public partial class OverlayWindow : Window
 
         StealForeground();
 
-        // Re-inject styles every time the overlay is shown.
-        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+        // Re-inject styles, restore zoom, and sync slider UI every time the overlay is shown.
+        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity));
+        _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildSyncScript(_opacity, _zoomPct));
+        WebView.ZoomFactor = _zoomPct / 100.0;
 
         OverlayShown?.Invoke(this, EventArgs.Empty);
         _logger.LogDebug("Overlay shown");
@@ -163,6 +174,9 @@ public partial class OverlayWindow : Window
 
     private void HideOverlay(bool restoreFocus)
     {
+        StopMouseHook();
+        _settings.Save(_settings.Current with { WindowLeft = Left, WindowTop = Top, WebViewZoomPct = _zoomPct });
+
         _isVisible = false;
         Visibility = Visibility.Collapsed;
 
@@ -181,7 +195,8 @@ public partial class OverlayWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            ApplyZoom(settings.WebViewZoomPct);
+            if (settings.WebViewZoomPct != _zoomPct)
+                ApplyZoom(settings.WebViewZoomPct);
 
             if (_webViewReady && _loadedChannelId != settings.YoutubeChannelId)
                 RestartNavigation(BuildPlayerUrl(settings.YoutubeChannelId));
@@ -270,29 +285,25 @@ public partial class OverlayWindow : Window
         _opacity = Math.Clamp(value, 0.1, 1.0);
         _logger.LogDebug("ApplyOpacity: {Opacity:F2}", _opacity);
         if (_webViewReady)
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity));
     }
 
     public void ApplyZoom(int zoomPct)
     {
-        _zoomPct = Math.Clamp(zoomPct, 10, 200);
+        _zoomPct = Math.Clamp(zoomPct, 20, 100);
         _logger.LogDebug("ApplyZoom: {Zoom}%", _zoomPct);
+        double factor = _zoomPct / 100.0;
+        // Resize the window and scale WebView2 content in the same operation to avoid blink.
+        Width  = Constants.FrameDisplayWidth  * factor;
+        Height = Constants.FrameDisplayHeight * factor;
         if (_webViewReady)
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+            WebView.ZoomFactor = factor;
     }
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         var msg = e.TryGetWebMessageAsString();
 
-        // Plain string messages
-        if (msg == "open-settings")
-        {
-            Dispatcher.Invoke(() => SettingsRequested?.Invoke(this, EventArgs.Empty));
-            return;
-        }
-
-        // JSON messages: drag, opacity, zoom
         if (!msg.StartsWith('{')) return;
 
         try
@@ -303,10 +314,21 @@ public partial class OverlayWindow : Window
 
             switch (t.GetString())
             {
-                case "drag":
-                    var dx = root.GetProperty("dx").GetDouble();
-                    var dy = root.GetProperty("dy").GetDouble();
-                    Dispatcher.Invoke(() => { Left += dx; Top += dy; });
+                case "lock":
+                    _dragLocked = root.GetProperty("locked").GetBoolean();
+                    _hookDragging = false;
+                    break;
+
+                case "startDrag":
+                    if (!_dragLocked)
+                    {
+                        PInvoke.GetWindowRect(_hwnd, out var dragRect);
+                        _hookDragStartX  = _lastHookMouseX;
+                        _hookDragStartY  = _lastHookMouseY;
+                        _hookDragWinLeft = dragRect.left;
+                        _hookDragWinTop  = dragRect.top;
+                        _hookDragging    = true;
+                    }
                     break;
 
                 case "opacity":
@@ -316,8 +338,28 @@ public partial class OverlayWindow : Window
 
                 case "zoom":
                     var pct = root.GetProperty("pct").GetInt32();
-                    Dispatcher.Invoke(() => ApplyZoom(pct));
+                    Dispatcher.Invoke(() =>
+                    {
+                        ApplyZoom(pct);
+                        _settings.Save(_settings.Current with { WebViewZoomPct = _zoomPct });
+                    });
                     break;
+
+                case "hotkey-focus":
+                    _hotkeyListener.Paused = root.GetProperty("active").GetBoolean();
+                    break;
+
+                case "hotkey":
+                    var keys = root.GetProperty("keys").EnumerateArray()
+                        .Select(k => k.GetString() ?? "")
+                        .Select(name => Enum.TryParse<KeyboardKey>(name, out var k) ? k : KeyboardKey.Unknown)
+                        .Where(k => k != KeyboardKey.Unknown)
+                        .ToArray();
+                    var shortcut = new KeyboardShortcut(keys);
+                    if (shortcut.IsValid)
+                        _settings.Save(_settings.Current with { ToggleHotkey = shortcut });
+                    break;
+
             }
         }
         catch (Exception ex)
@@ -331,18 +373,56 @@ public partial class OverlayWindow : Window
     // DirectComposition surface bypasses the host window's alpha channel.
     // CSS opacity runs inside Chromium's GPU compositor and correctly blends
     // the page against the transparent WPF window background.
-    private static string BuildOverlayStyleScript(double opacity, int zoomPct) =>
+    // Zoom is handled by WebView.ZoomFactor (synchronous, no blink).
+    // CSS here covers only opacity and transparency.
+    private static string BuildOverlayStyleScript(double opacity) =>
         $"(function(){{" +
         $"var s=document.getElementById('__ol_style');" +
         $"if(!s){{s=document.createElement('style');s.id='__ol_style';" +
         $"(document.head||document.documentElement).appendChild(s);}}" +
         $"s.textContent='html,body{{background:transparent!important}}" +
-        $"html{{opacity:{opacity:F3}!important;zoom:{zoomPct}%!important}}';" +
+        $"html{{opacity:{opacity:F3}!important}}';" +
         $"}})();";
+
+    // Syncs slider positions and displayed values to match current C# state.
+    // Called on ShowOverlay so the UI reflects actual state after a hide/show cycle.
+    private string BuildSyncScript(double opacity, int zoomPct)
+    {
+        int opacityDisplay = (int)Math.Round((opacity - 0.30) / 0.70 * 100);
+        var hotkeyLabel = System.Text.Json.JsonSerializer.Serialize(_settings.Current.ToggleHotkey.ToString());
+        return $"(function(){{" +
+               $"var os=document.getElementById('opacity-slider');" +
+               $"var ov=document.getElementById('opacity-val');" +
+               $"var zi=document.getElementById('zoom-input');" +
+               $"var hi=document.getElementById('hotkey-input');" +
+               $"if(os){{os.value={opacityDisplay};if(ov)ov.textContent='{opacityDisplay}%';}}" +
+               $"if(zi)zi.value={zoomPct};" +
+               $"if(hi)hi.value={hotkeyLabel};" +
+               $"}})();";
+    }
 
     // -------------------------------------------------------------------------
     // Global mouse hook — WH_MOUSE_LL intercepts WM_MOUSEWHEEL system-wide.
+    // Installed only while the overlay is visible so it never adds latency to
+    // other apps when the overlay is hidden.
     // -------------------------------------------------------------------------
+
+    private void StartMouseHook()
+    {
+        if (_mouseHookThread is { IsAlive: true }) return;
+        _mouseHookThread = new Thread(RunMouseHook) { IsBackground = true, Name = "MouseHook" };
+        _mouseHookThread.Start();
+    }
+
+    private void StopMouseHook()
+    {
+        if (_mouseHookThreadId != 0)
+            PInvoke.PostThreadMessage(_mouseHookThreadId, PInvoke.WM_QUIT, 0, 0);
+        _mouseHookHandle?.Dispose();
+        _mouseHookHandle = null;
+        _mouseHookId = HHOOK.Null;
+        _mouseHookThreadId = 0;
+    }
 
     private void RunMouseHook()
     {
@@ -369,10 +449,52 @@ public partial class OverlayWindow : Window
     private LRESULT MouseHookProc(int nCode, WPARAM wparam, LPARAM lparam)
     {
         const uint WM_MOUSEWHEEL = 0x020A;
+        const uint WM_MOUSEMOVE  = 0x0200;
+        const uint WM_LBUTTONUP  = 0x0202;
+        // SWP_ASYNCWINDOWPOS posts the move to the UI thread without blocking the hook.
+        const SET_WINDOW_POS_FLAGS SWP_ASYNC =
+            SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOZORDER |
+            SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | (SET_WINDOW_POS_FLAGS)0x4000;
+
+        if (nCode >= 0 && _isVisible)
+        {
+            var msg = (uint)wparam.Value;
+            var hs  = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lparam);
+
+            // Always track cursor position so startDrag (from JS) can use the exact
+            // mousedown coordinates even though it arrives slightly later via IPC.
+            _lastHookMouseX = hs.pt.X;
+            _lastHookMouseY = hs.pt.Y;
+
+            // Drag is started exclusively by JS via {type:'startDrag'} — JS knows
+            // whether the click was on frame space vs. a button or the video area.
+            if (msg == WM_MOUSEMOVE && _hookDragging)
+            {
+                int newLeft = _hookDragWinLeft + (hs.pt.X - _hookDragStartX);
+                int newTop  = _hookDragWinTop  + (hs.pt.Y - _hookDragStartY);
+                PInvoke.SetWindowPos(_hwnd, HWND.Null, newLeft, newTop, 0, 0, SWP_ASYNC);
+            }
+            else if (msg == WM_LBUTTONUP)
+            {
+                if (_hookDragging)
+                {
+                    _hookDragging = false;
+                    // Sync WPF Left/Top so position-save in HideOverlay is accurate.
+                    PInvoke.GetWindowRect(_hwnd, out var rect);
+                    Dispatcher.BeginInvoke(() => { Left = rect.left / _dpiScale; Top = rect.top / _dpiScale; });
+                }
+            }
+        }
 
         if (nCode >= 0 && (uint)wparam.Value == WM_MOUSEWHEEL && _isVisible && _webViewReady)
         {
             var hs = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lparam);
+
+            // Only intercept scroll when the cursor is inside the overlay window.
+            PInvoke.GetWindowRect(_hwnd, out var winRect);
+            if (hs.pt.X < winRect.left || hs.pt.X > winRect.right ||
+                hs.pt.Y < winRect.top  || hs.pt.Y > winRect.bottom)
+                return PInvoke.CallNextHookEx(_mouseHookId, nCode, wparam, lparam);
 
             short delta = (short)(hs.mouseData >> 16);
             int scrollPx = -(delta / 120) * 100;
@@ -414,7 +536,20 @@ public partial class OverlayWindow : Window
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        const int WM_MOUSEWHEEL = 0x020A;
+        const int WM_NCHITTEST   = 0x0084;
+        const int WM_MOUSEWHEEL  = 0x020A;
+        const int HTCLIENT       = 1;
+
+        // With AllowsTransparency=True and a fully transparent WPF background,
+        // WPF returns HTTRANSPARENT for every pixel, so Windows routes all mouse
+        // events past the window to whatever lies behind it — including the WebView2
+        // child HWND.  Intercepting WM_NCHITTEST and returning HTCLIENT tells
+        // Windows the entire client area is interactive and delivers events normally.
+        if (msg == WM_NCHITTEST)
+        {
+            handled = true;
+            return new IntPtr(HTCLIENT);
+        }
 
         if (msg == WM_MOUSEWHEEL && _webViewReady)
         {
@@ -507,6 +642,14 @@ public partial class OverlayWindow : Window
                 rendererFolder,
                 CoreWebView2HostResourceAccessKind.Allow);
 
+            // Intercept all pulsenet.local requests and serve renderer files directly
+            // with Cache-Control: no-store so CSS/JS changes take effect immediately
+            // after a rebuild without requiring a manual cache clear.
+            WebView.CoreWebView2.AddWebResourceRequestedFilter(
+                $"https://{Constants.PlayerVirtualHost}/*",
+                CoreWebView2WebResourceContext.All);
+            WebView.CoreWebView2.WebResourceRequested += OnRendererResourceRequested;
+
             var initialUrl = BuildPlayerUrl(_settings.Current.YoutubeChannelId);
             WebView.Source = new Uri(initialUrl);
 
@@ -525,6 +668,47 @@ public partial class OverlayWindow : Window
         catch (Exception ex)
         {
             _logger.LogError(ex, "WebView2 initialization failed");
+        }
+    }
+
+    private void OnRendererResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        try
+        {
+            var uri      = new Uri(e.Request.Uri);
+            var relative = uri.AbsolutePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            if (string.IsNullOrEmpty(relative))
+                relative = "index.html";
+
+            var rendererFolder = Path.Combine(AppContext.BaseDirectory, Constants.PlayerRendererFolder);
+            var filePath = Path.Combine(rendererFolder, relative);
+
+            // Security: ensure the resolved path stays inside the renderer folder.
+            if (!filePath.StartsWith(rendererFolder, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (!File.Exists(filePath)) return;
+
+            var mime = Path.GetExtension(filePath).ToLowerInvariant() switch
+            {
+                ".html"         => "text/html; charset=utf-8",
+                ".css"          => "text/css; charset=utf-8",
+                ".js"           => "application/javascript; charset=utf-8",
+                ".png"          => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".svg"          => "image/svg+xml",
+                ".ico"          => "image/x-icon",
+                _               => "application/octet-stream",
+            };
+
+            var stream = File.OpenRead(filePath);
+            e.Response = _env!.CreateWebResourceResponse(
+                stream, 200, "OK",
+                $"Content-Type: {mime}\r\nCache-Control: no-store, no-cache");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug("Renderer resource handler error: {Ex}", ex.Message);
         }
     }
 
@@ -551,7 +735,7 @@ public partial class OverlayWindow : Window
         {
             _webViewReady = true;
             _navigationErrorShown = false;
-            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity, _zoomPct));
+            _ = WebView.CoreWebView2.ExecuteScriptAsync(BuildOverlayStyleScript(_opacity));
             return;
         }
 

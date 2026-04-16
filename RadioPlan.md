@@ -19,7 +19,7 @@ graph TD
 
         subgraph LAYERS["Visual Layers — Z-order"]
             L0["Layer 0: frame_base QLabel\nStatic background PNG\nNo glow elements"]
-            L1["Layer 1: QWebEngineView\nPositioned at video rect: 80,45 → 880,495\n800×450 px (16:9)"]
+            L1["Layer 1: QWebEngineView\nPositioned at video rect: 80,45 → 880,495\n800×450 px (16:9)"]buttons 
             L2["Layer 2: frame_glow QLabel\nPNG with only light elements\nTransparent background\nAnimated via QGraphicsOpacityEffect"]
             L3["Layer 3: Logo QLabel\nVisible when PlayState == IDLE\nCentered over video rect"]
             L4["Layer 4: Playlist Buttons\nLeft column + Right column\nQPushButton styled cyan/dark"]

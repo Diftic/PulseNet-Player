@@ -97,3 +97,4 @@ PostThreadMessage
 SendMessage
 PostMessage
 MSLLHOOKSTRUCT
+ReleaseCapture

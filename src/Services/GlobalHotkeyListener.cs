@@ -45,7 +45,6 @@ public sealed class GlobalHotkeyListener : IHostedService, IDisposable
     public bool Paused { get; set; }
 
     public event EventHandler? HotkeyPressed;
-    public event EventHandler? EscapePressed;
 
     public GlobalHotkeyListener(SettingsManager settings, ILogger<GlobalHotkeyListener> logger)
     {
@@ -107,20 +106,16 @@ public sealed class GlobalHotkeyListener : IHostedService, IDisposable
 
     private LRESULT HookProc(int nCode, WPARAM wparam, LPARAM lparam)
     {
-        if (nCode < 0)
-            return WinPInvoke.CallNextHookEx(_hookId, nCode, wparam, lparam);
+        if (nCode >= 0)
+            HandleKeyEvent(wparam, lparam);
 
-        HandleKeyEvent(wparam, lparam, out var handled);
-        if (handled)
-            return (LRESULT)1;
-
+        // Always pass to the next hook — never swallow keys so other apps (e.g. SC-HUD)
+        // remain unaffected regardless of hook installation order.
         return WinPInvoke.CallNextHookEx(_hookId, nCode, wparam, lparam);
     }
 
-    private void HandleKeyEvent(WPARAM wparam, LPARAM lparam, out bool handled)
+    private void HandleKeyEvent(WPARAM wparam, LPARAM lparam)
     {
-        handled = false;
-
         if (Paused)
         {
             // Clear held-key tracking so stale state doesn't accumulate while paused.
@@ -163,13 +158,8 @@ public sealed class GlobalHotkeyListener : IHostedService, IDisposable
             // processed) — that is the only context where it is allowed by Windows.
             WinPInvoke.AllowSetForegroundWindow(0xFFFFFFFF); // ASFW_ANY
             HotkeyPressed?.Invoke(this, EventArgs.Empty);
-            handled = true;
             return;
         }
-
-        // ESC alone closes the overlay (does not suppress the key).
-        if (vk == VIRTUAL_KEY.VK_ESCAPE && _heldKeys.Count == 1)
-            EscapePressed?.Invoke(this, EventArgs.Empty);
 
         _heldKeys.Remove(vk);
     }

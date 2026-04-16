@@ -11,7 +11,7 @@ internal static class Constants
     public const string PlayerRendererFolder    = "Renderer";
 
     // Frame canvas dimensions — source image 2515×1292 displayed at 50%.
-    public const int FrameDisplayWidth  = 1258;
+    public const int FrameDisplayWidth  = 1202;
     public const int FrameDisplayHeight = 646;
 
     // Default YouTube channel for @Mr_Xul (test/development channel).

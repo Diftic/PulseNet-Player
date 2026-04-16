@@ -11,8 +11,13 @@
         Visibility="Collapsed"
         Title="Pulsenet Radio">
     <Window.Background>
-        <!-- Transparent — areas outside the WebView2 widget are click-through. -->
-        <SolidColorBrush Color="Transparent"/>
+        <!-- #01000000: alpha=1/255, visually invisible but non-zero alpha.
+             AllowsTransparency uses UpdateLayeredWindow (per-pixel alpha), so any
+             pixel with alpha=0 is click-through at the OS level — WM_NCHITTEST is
+             bypassed entirely. A near-zero alpha background ensures no pixel is
+             fully transparent, so Windows delivers mouse events to this window and
+             its WebView2 child HWND. -->
+        <SolidColorBrush Color="#01000000"/>
     </Window.Background>
 
     <Grid>

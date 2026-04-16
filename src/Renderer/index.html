@@ -11,6 +11,7 @@
     <!-- Layer 1: YouTube player (bottom) -->
     <div id="video-wrap">
       <div id="player"></div>
+      <img id="idle-logo" src="assets/main_logo.png" draggable="false" alt="">
     </div>
 
     <!-- Layer 2: Sci-fi frame (no glow, structural) -->
@@ -23,6 +24,12 @@
     <!-- Layer 4: Station selector buttons -->
     <div id="stations-left"  class="station-col"></div>
     <div id="stations-right" class="station-col"></div>
+
+    <!-- Layer 4c: Special utility buttons -->
+    <button id="pulsenet-home-btn" class="station-btn">
+      <img src="assets/pulsenet_icon.png" alt="PulseNet" draggable="false">
+    </button>
+    <button id="about-btn" class="station-btn">Info</button>
 
     <!-- Layer 4b: Station icon hover preview — centered over video rect -->
     <div id="station-preview" class="hidden">
@@ -42,12 +49,13 @@
         <span class="settings-val" id="opacity-val">100%</span>
       </div>
       <div class="settings-row">
-        <span class="settings-label">Zoom</span>
-        <input type="range" id="zoom-slider" class="settings-slider" min="50" max="150" value="100">
-        <span class="settings-val" id="zoom-val">100%</span>
+        <button class="settings-action-btn" id="zoom-down-btn">-10% size</button>
+        <input type="number" id="zoom-input" class="settings-zoom-input" min="20" max="100" value="100">
+        <button class="settings-action-btn" id="zoom-up-btn">+10% size</button>
       </div>
       <div class="settings-row">
-        <button class="settings-action-btn" id="hotkey-btn">Change Hotkey</button>
+        <span class="settings-label">Hotkey</span>
+        <input type="text" id="hotkey-input" class="settings-hotkey-input" readonly placeholder="Click, then press keys">
       </div>
     </div>
 

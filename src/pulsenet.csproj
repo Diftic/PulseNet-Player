@@ -37,7 +37,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Resource Include="Assets\logo.png" />
+        <Resource Include="Assets\main_logo.png" />
         <EmbeddedResource Include="Assets\icon.ico" />
     </ItemGroup>
 
