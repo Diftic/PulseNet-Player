@@ -20,9 +20,10 @@
     <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
 
     <Feature Id="Main" Title="PulseNet Radio" Level="1">
-      <Files Include="stage\**" Directory="INSTALLFOLDER" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
+
+    <Files Include="stage\**" Directory="INSTALLFOLDER" />
 
   </Package>
 
