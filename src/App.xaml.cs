@@ -86,10 +86,8 @@ public partial class App : Application
         }
         listener.HotkeyPressed += OnFirstHotkey;
 
-        // Hotkey → toggle overlay; tray icon reflects overlay state
+        // Hotkey → toggle overlay
         listener.HotkeyPressed      += (_, _) => Dispatcher.InvokeAsync(overlay.Toggle);
-        overlay.OverlayShown        += (_, _) => _trayIcon.SetActive(true);
-        overlay.OverlayHidden       += (_, _) => _trayIcon.SetActive(false);
         overlay.BalloonTipRequested += (title, msg) => _trayIcon.ShowBalloon(title, msg);
     }
 

@@ -11,8 +11,7 @@ using System.Windows.Forms;
 public sealed class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _notifyIcon;
-    private readonly Icon _iconDefault;
-    private readonly Icon _iconActive;
+    private readonly Icon _icon;
     private readonly ToolStripMenuItem _retryUpdateItem;
     private string? _pendingMsiPath;
 
@@ -20,12 +19,11 @@ public sealed class TrayIcon : IDisposable
 
     public TrayIcon()
     {
-        _iconDefault = LoadEmbeddedIcon();
-        _iconActive  = TintIcon(_iconDefault, Color.FromArgb(80, 200, 120)); // green tint when player open
+        _icon = LoadEmbeddedIcon();
 
         _notifyIcon = new NotifyIcon
         {
-            Icon = _iconDefault,
+            Icon = _icon,
             Text = Constants.ApplicationName,
             Visible = true,
         };
@@ -37,9 +35,6 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add("Exit", null, (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty));
         _notifyIcon.ContextMenuStrip = menu;
     }
-
-    public void SetActive(bool active)
-        => _notifyIcon.Icon = active ? _iconActive : _iconDefault;
 
     public void ShowBalloon(string title, string message, ToolTipIcon icon = ToolTipIcon.Info)
         => _notifyIcon.ShowBalloonTip(3000, title, message, icon);
@@ -80,8 +75,7 @@ public sealed class TrayIcon : IDisposable
     {
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
-        _iconDefault.Dispose();
-        _iconActive.Dispose();
+        _icon.Dispose();
     }
 
     // -------------------------------------------------------------------------
@@ -95,24 +89,6 @@ public sealed class TrayIcon : IDisposable
         if (stream is null)
             return CreateFallbackIcon(Color.FromArgb(34, 211, 238)); // cyan fallback
         return new Icon(stream, 16, 16);
-    }
-
-    // Creates a version of the icon with a coloured overlay — used for the active state.
-    private static Icon TintIcon(Icon source, Color tint)
-    {
-        using var bmp = new Bitmap(16, 16);
-        using (var g = Graphics.FromImage(bmp))
-        {
-            g.DrawIcon(source, 0, 0);
-            using var brush = new SolidBrush(Color.FromArgb(140, tint));
-            g.FillRectangle(brush, 0, 0, 16, 16);
-        }
-
-        var hIcon = bmp.GetHicon();
-        var icon  = Icon.FromHandle(hIcon);
-        var clone = (Icon)icon.Clone();
-        DestroyIcon(hIcon);
-        return clone;
     }
 
     private static Icon CreateFallbackIcon(Color color)

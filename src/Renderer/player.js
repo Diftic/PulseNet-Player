@@ -15,11 +15,17 @@
   }
 
   // ---- State ----
-  var player          = null;
-  var playerReady     = false;
-  var pendingPlaylist = null;
-  var pendingVideoId  = null;
-  var activeBtn       = null;
+  var player           = null;
+  var playerReady      = false;
+  var pendingPlaylist  = null;
+  var pendingVideoId   = null;
+  var activeBtn        = null;
+  var liveStreamActive = false; // true when #player is a raw live_stream iframe
+
+  // PulseNet Broadcasting main channel — used by the top-left "live" button.
+  // We resolve the current broadcast via the live_stream embed URL so restarts
+  // automatically follow the new videoId instead of breaking on past-broadcasts.
+  var PULSENET_LIVE_CHANNEL = 'UCIMaIJsfJEMi5yJIe5nAb0g';
 
   // ---- Idle logo ----
   var idleLogo = document.getElementById('idle-logo');
@@ -112,24 +118,69 @@
     btn.classList.add('active');
     hideIdleLogo();
 
-    if (playerReady && player) {
-      if (station.videoId) {
-        player.loadVideoById(station.videoId);
-      } else {
-        player.loadPlaylist({ listType: 'playlist', list: station.playlistId });
-      }
+    // Coming back from a live_stream iframe, or API player not yet built —
+    // rebuild the YT.Player, then hand the station over once it's ready.
+    if (liveStreamActive || !player) {
+      createApiPlayer(function () { loadStationIntoPlayer(station); });
+      return;
+    }
+
+    if (playerReady) {
+      loadStationIntoPlayer(station);
     } else {
-      pendingPlaylist = station.playlistId || null;
       pendingVideoId  = station.videoId  || null;
+      pendingPlaylist = station.playlistId || null;
     }
   }
 
-  // ---- Load YouTube IFrame API ----
-  var tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(tag);
+  function loadStationIntoPlayer(station) {
+    if (!player) return;
+    if (station.videoId) {
+      player.loadVideoById(station.videoId);
+    } else if (station.playlistId) {
+      player.loadPlaylist({ listType: 'playlist', list: station.playlistId });
+    }
+  }
 
-  window.onYouTubeIframeAPIReady = function () {
+  // ---- Live stream / API player swap ----
+  // YT.Player can only load specific videoIds. Live streams get a new videoId
+  // whenever the broadcaster restarts, so pinning to one breaks when a stream
+  // ends ("This live stream recording is not available"). The live_stream
+  // embed URL always resolves to the current broadcast — but it only works as
+  // a raw iframe, not through the IFrame API. So we swap between two modes:
+  // API player for playlists/videos, raw iframe for live channel playback.
+
+  function teardownPlayer() {
+    if (player && typeof player.destroy === 'function') {
+      try { player.destroy(); } catch (_) {}
+    }
+    player = null;
+    playerReady = false;
+
+    // YT.Player replaces #player (a <div>) with an <iframe> of the same id.
+    // Restore a clean <div id="player"> so the next creation has something
+    // to mount against. Use replaceChild so we preserve the child index —
+    // inserting at index 0 would put us before the leading whitespace text
+    // node and shift the iframe's baseline by 1px.
+    var wrap = document.getElementById('video-wrap');
+    if (!wrap) return;
+    var div = document.createElement('div');
+    div.id = 'player';
+    var existing = document.getElementById('player');
+    if (existing && existing.parentNode) {
+      existing.parentNode.replaceChild(div, existing);
+    } else {
+      wrap.appendChild(div);
+    }
+  }
+
+  function createApiPlayer(onReadyCb) {
+    // Only tear down when there's something to tear down. On initial load
+    // the HTML-provided #player div is already clean; re-creating it via JS
+    // produced a subtle 1px vertical offset versus the parser-created node.
+    if (player || liveStreamActive) teardownPlayer();
+    liveStreamActive = false;
+
     var listId = uploadsPlaylistId(channelId);
     var vars = {
       autoplay:       0,
@@ -149,23 +200,49 @@
       height:      '100%',
       playerVars:  vars,
       events: {
-        onReady:       onPlayerReady,
+        onReady: function () {
+          playerReady = true;
+          if (onReadyCb) {
+            onReadyCb();
+          } else if (pendingVideoId) {
+            player.loadVideoById(pendingVideoId);
+            pendingVideoId = null;
+          } else if (pendingPlaylist) {
+            player.loadPlaylist({ listType: 'playlist', list: pendingPlaylist });
+            pendingPlaylist = null;
+          }
+        },
         onStateChange: onPlayerStateChange,
         onError:       onPlayerError,
       },
     });
-  };
-
-  function onPlayerReady() {
-    playerReady = true;
-    if (pendingVideoId) {
-      player.loadVideoById(pendingVideoId);
-      pendingVideoId = null;
-    } else if (pendingPlaylist) {
-      player.loadPlaylist({ listType: 'playlist', list: pendingPlaylist });
-      pendingPlaylist = null;
-    }
   }
+
+  function loadLiveStream(chId) {
+    teardownPlayer();
+    liveStreamActive = true;
+
+    var div = document.getElementById('player');
+    if (!div) return;
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://www.youtube.com/embed/live_stream?channel='
+      + encodeURIComponent(chId) + '&autoplay=1';
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.style.width  = '100%';
+    iframe.style.height = '100%';
+    div.appendChild(iframe);
+  }
+
+  // ---- Load YouTube IFrame API ----
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+
+  window.onYouTubeIframeAPIReady = function () {
+    createApiPlayer(null);
+  };
 
   function onPlayerStateChange(event) {
     // Native YouTube controls handle playback UI — no custom state needed here.
@@ -216,12 +293,7 @@
       if (activeBtn) activeBtn.classList.remove('active');
       activeBtn = null;
       hideIdleLogo();
-      if (playerReady && player) {
-        player.loadVideoById('b-YcZMSKqeo');
-      } else {
-        pendingVideoId  = 'b-YcZMSKqeo';
-        pendingPlaylist = null;
-      }
+      loadLiveStream(PULSENET_LIVE_CHANNEL);
     });
   }
 

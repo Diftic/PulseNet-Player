@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-04-17 — Session 5 — v0.3.0 — Discord CTA, click-blocker, tray icon cleanup
+
+### Discord button in settings panel
+Earlier iterations placed a "Join us on Discord" button above and then overlaying the video. Neither position felt right — centered above fought with the video centerline, and bottom-right overlayed YouTube's own controls. Solution: embedded the Discord wordmark button inside the settings panel, above the frame-lock row. Uses the existing `.settings-action-btn` class for identical dimensions (452×40), with the logo filling the button edge-to-edge via `object-fit: contain`. Clicks route through the existing `openUrl` WebView message → `OpenInDefaultBrowser`, opening <https://discord.com/invite/Vxn7kzzWGJ> in the user's default browser. Logo source (2260×200) resized to 904×80 (2x HiDPI) for crisp display.
+
+### Click-blocker — YouTube overlay neutralised
+Added a transparent `#click-blocker` div inside `#video-wrap`, positioned to cover the bottom 50px of the video rect (full width × 50px). No listeners, no visual feedback — just absorbs clicks so the user can't reach YouTube's "More videos" / "Share" / fullscreen overlay at the bottom. `z-index: 3` puts it above the iframe but below frame/stations/settings.
+
+### Tray icon — dropped active-state green tint
+`TrayIcon.cs` previously applied a 140-alpha green overlay (`Color.FromArgb(80, 200, 120)`) to signal "player open". Clashed with the brand cyan. Removed `_iconActive` + `TintIcon` helper + `SetActive` method entirely; removed the `OverlayShown`/`OverlayHidden` event subscriptions from `App.xaml.cs` that fed it. Tray icon now stays blue regardless of state.
+
+### 1px video-frame gap fixed
+`#video-wrap` and `#station-preview` had `top: 101px` (off by one from the file's header spec of `top=100`), producing a visible gap between the top of the video and the sci-fi frame overlay graphic. Reset to `top: 100px` to match the frame's video cutout.
+
+---
+
 ## 2026-04-17 — Session 4 — README, sales page, station count correction
 
 ### README.md

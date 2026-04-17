@@ -35,7 +35,7 @@ html, body {
 #video-wrap {
   position: absolute;
   left: 193px;
-  top: 101px;
+  top: 100px;
   width: 812px;
   height: 433px;
   z-index: 1;
@@ -44,11 +44,17 @@ html, body {
 }
 
 #player {
+  position: relative;
   width: 100%;
   height: 100%;
 }
 
 #player iframe {
+  /* Absolute + inset takes the iframe out of normal flow, so sibling text
+     nodes can't drift it down by ~1px via baseline alignment when we swap
+     between the YT.Player iframe and a raw live_stream iframe. */
+  position: absolute;
+  inset: 0;
   width: 100% !important;
   height: 100% !important;
   /* Scale up to fill the pillarbox bars. Container is 812×433 (1.875:1);
@@ -57,6 +63,21 @@ html, body {
   transform-origin: center center;
   border: none;
   display: block;
+}
+
+/* ---- Click-blocker — transparent barrier over the bottom 70px of the video.
+   Absorbs clicks so YouTube's "More videos" / "Share" buttons aren't reachable.
+   No listeners attached; pointer-events: auto (default) is enough — clicks hit
+   this element and never reach the iframe below. */
+#click-blocker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 50px;
+  z-index: 3;
+  background: transparent;
+  cursor: default;
 }
 
 /* ---- Idle logo — shown when no station is active ---- */
@@ -185,7 +206,7 @@ html, body {
 #station-preview {
   position: absolute;
   left: 193px;
-  top: 101px;
+  top: 100px;
   width: 812px;
   height: 433px;
   z-index: 1;
@@ -250,13 +271,11 @@ html, body {
   letter-spacing: 0.05em;
 }
 
-/* ---- Layer 5: Discord + Settings buttons ----
-   Positioned symmetrically: Discord above the video, Settings below. Both
-   are 188×38, horizontally centered on the video, 47px from the video edge. */
-#discord-btn,
+/* ---- Layer 5: Settings button — below the video, 188×38 framed ---- */
 #settings-btn {
   position: absolute;
   left: 507px;
+  top: 581px;
   width: 188px;
   height: 38px;
   z-index: 5;
@@ -279,10 +298,6 @@ html, body {
   -webkit-user-drag: none;
 }
 
-#discord-btn { top: 16px; }
-#settings-btn { top: 581px; }
-
-#discord-btn:hover,
 #settings-btn:hover {
   background: rgba(34, 211, 238, 0.10);
   border-color: rgba(34, 211, 238, 0.55);
@@ -376,6 +391,25 @@ html, body {
   background: rgba(34, 211, 238, 0.10);
   border-color: rgba(34, 211, 238, 0.55);
   color: #22d3ee;
+}
+
+/* Discord button inside the settings panel — uses .settings-action-btn
+   for identical dimensions; image fills the button edge-to-edge. */
+#discord-btn.settings-action-btn {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#discord-btn.settings-action-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .settings-zoom-input {
