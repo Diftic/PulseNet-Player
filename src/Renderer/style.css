@@ -1,7 +1,7 @@
 /* ============================================================
    PulseNet Player — Overlay Renderer
    Frame canvas: 1202 × 646 px  (trimmed 28px each side from 1258)
-   Video rect:   left=193 top=100  width=812 height=433
+   Video rect:   left=193 top=88   width=812 height=457  (true 16:9, centered at y=316.5)
    Left col:     left=0   top=100  width=193 height=433
    Right col:    left=1005 top=100 width=197 height=433
    ============================================================ */
@@ -31,13 +31,16 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ---- Layer 1: YouTube player ---- */
+/* ---- Layer 1: YouTube player ----
+   True 16:9 at 812×457, centered on video y-axis 316.5 to preserve
+   station button alignment. Natural video renders edge-to-edge
+   without pillarbox bars or cropping. */
 #video-wrap {
   position: absolute;
   left: 193px;
-  top: 100px;
+  top: 88px;
   width: 812px;
-  height: 433px;
+  height: 457px;
   z-index: 1;
   background: #000;
   overflow: hidden;
@@ -57,10 +60,6 @@ html, body {
   inset: 0;
   width: 100% !important;
   height: 100% !important;
-  /* Scale up to fill the pillarbox bars. Container is 812×433 (1.875:1);
-     YouTube renders 16:9 video at 770px wide — scale 812/770 = 1.055 fills it. */
-  transform: scale(1.055);
-  transform-origin: center center;
   border: none;
   display: block;
 }
@@ -74,7 +73,7 @@ html, body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 50px;
+  height: 60px;
   z-index: 3;
   background: transparent;
   cursor: default;
@@ -97,13 +96,17 @@ html, body {
   display: none;
 }
 
-/* ---- Layer 2: Frame base ---- */
+/* ---- Layer 2: Frame base ----
+   Sized 20px wider and 10px taller than the 1202×646 canvas so the
+   frame's inner cutout stops clipping the sides and top/bottom of
+   the video. Negative offset keeps the frame centered; overflow on
+   #app clips the small overhang. */
 #frame-base {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 1202px;
-  height: 646px;
+  left: -25px;
+  top: -12px;
+  width: 1252px;
+  height: 670px;
   z-index: 2;
   pointer-events: none;
   user-select: none;
@@ -112,10 +115,10 @@ html, body {
 /* ---- Layer 3: Glow overlay ---- */
 #frame-glow {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 1202px;
-  height: 646px;
+  left: -25px;
+  top: -12px;
+  width: 1252px;
+  height: 670px;
   z-index: 3;
   pointer-events: none;
   user-select: none;
@@ -206,9 +209,9 @@ html, body {
 #station-preview {
   position: absolute;
   left: 193px;
-  top: 100px;
+  top: 88px;
   width: 812px;
-  height: 433px;
+  height: 457px;
   z-index: 1;
   pointer-events: none;
   background: #000;
