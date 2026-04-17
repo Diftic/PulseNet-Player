@@ -3,9 +3,9 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
   <Package
-    Name="PulseNet Radio"
+    Name="PulseNet Player"
     Version="$(var.ProductVersion)"
-    Manufacturer="PulseNet Radio"
+    Manufacturer="PulseNet Player"
     UpgradeCode="AFAACCA7-3810-4953-B21F-0122FF8106DE"
     Language="1033"
     Scope="perUser">
@@ -13,13 +13,13 @@
     <Icon Id="AppIcon.ico" SourceFile="icon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of PulseNet Radio is already installed." />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of PulseNet Player is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
 
-    <Feature Id="Main" Title="PulseNet Radio" Level="1">
+    <Feature Id="Main" Title="PulseNet Player" Level="1">
       <ComponentGroupRef Id="AppFiles" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
@@ -29,11 +29,11 @@
   <Fragment>
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="ProgramsFolder" Name="Programs">
-        <Directory Id="INSTALLFOLDER" Name="PulseNet Radio" />
+        <Directory Id="INSTALLFOLDER" Name="PulseNet Player" />
       </Directory>
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="AppMenuFolder" Name="PulseNet Radio" />
+      <Directory Id="AppMenuFolder" Name="PulseNet Player" />
     </StandardDirectory>
   </Fragment>
 
@@ -47,15 +47,15 @@
     <Component Id="StartMenuShortcut" Directory="AppMenuFolder">
       <Shortcut
         Id="ApplicationShortcut"
-        Name="PulseNet Radio"
-        Description="Sci-fi YouTube radio overlay for Star Citizen"
-        Target="[INSTALLFOLDER]PulseNet-Broadcaster.exe"
+        Name="PulseNet Player"
+        Description="Sci-fi YouTube music overlay for Star Citizen"
+        Target="[INSTALLFOLDER]PulseNet-Player.exe"
         WorkingDirectory="INSTALLFOLDER"
         Icon="AppIcon.ico" />
       <RemoveFolder Id="RemoveAppMenuFolder" Directory="AppMenuFolder" On="uninstall" />
       <RegistryValue
         Root="HKCU"
-        Key="Software\PulseNet Radio"
+        Key="Software\PulseNet Player"
         Name="installed"
         Type="integer"
         Value="1"

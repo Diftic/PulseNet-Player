@@ -1,4 +1,4 @@
-// Pulsenet Radio — Station Configuration
+// PulseNet Player — Station Configuration
 // Replace playlistId values with real YouTube playlist IDs when the channel is live.
 // icon: path relative to Renderer/ folder.
 

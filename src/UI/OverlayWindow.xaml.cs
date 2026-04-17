@@ -667,7 +667,7 @@ public partial class OverlayWindow : Window
             _logger.LogError("WebView2 runtime is not installed");
             BalloonTipRequested?.Invoke(
                 "WebView2 not installed",
-                "Pulsenet Radio requires the Microsoft Edge WebView2 Runtime. Please install it and restart.");
+                "PulseNet Player requires the Microsoft Edge WebView2 Runtime. Please install it and restart.");
         }
         catch (Exception ex)
         {
@@ -753,7 +753,7 @@ public partial class OverlayWindow : Window
 
         WebView.NavigateToString(
             "<html><body style='background:#1a1a1a;color:#ccc;font-family:sans-serif;padding:24px'>" +
-            "<h2 style='color:#e88'>Could not load Pulsenet Radio player</h2>" +
+            "<h2 style='color:#e88'>Could not load PulseNet Player</h2>" +
             "<p>The local player page failed to load.</p>" +
             "<p>Ensure the Renderer folder is present alongside the executable.</p>" +
             "</body></html>");

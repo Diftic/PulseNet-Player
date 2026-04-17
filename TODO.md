@@ -1,4 +1,4 @@
-# Pulsenet Radio — TODO
+# PulseNet Player — TODO
 
 ---
 
@@ -45,11 +45,11 @@
 
 - [ ] Validate YouTube channel ID format before saving (must match `UC[A-Za-z0-9_-]{22}`)
 - [ ] Show channel name preview after entering ID (YouTube oEmbed API, no key required)
-- [ ] Update `UpdateChecker.cs` GitHub URL once the pulsenet-radio repo is live
+- [ ] Update `UpdateChecker.cs` GitHub URL once the PulseNet-Player repo is live
 
 ## Distribution
 
-- [x] **Establish GitHub repo** — https://github.com/Diftic/pulsenet-radio
+- [x] **Establish GitHub repo** — https://github.com/Diftic/PulseNet-Player
 - [x] README.md — full project overview, 19-station lineup, architecture, developer guide
 - [x] Sales page — `docs/index.html`, matches SC-HUD design, Coming Soon CTA, no GitHub links
 - [ ] **Enable GitHub Pages** — Repo → Settings → Pages → branch: master, folder: /docs

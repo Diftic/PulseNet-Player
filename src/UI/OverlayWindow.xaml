@@ -9,7 +9,7 @@
         AllowsTransparency="True"
         WindowStartupLocation="Manual"
         Visibility="Collapsed"
-        Title="Pulsenet Radio">
+        Title="PulseNet Player">
     <Window.Background>
         <!-- #01000000: alpha=1/255, visually invisible but non-zero alpha.
              AllowsTransparency uses UpdateLayeredWindow (per-pixel alpha), so any

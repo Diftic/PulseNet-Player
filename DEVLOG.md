@@ -1,4 +1,4 @@
-# Pulsenet Radio — Dev Log
+# PulseNet Player — Dev Log
 
 > Entertainment Division of The Exelus Corporation — "The 'Verse always has a soundtrack."
 

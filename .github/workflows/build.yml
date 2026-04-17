@@ -39,7 +39,7 @@ jobs:
       - name: Prepare portable exe
         shell: pwsh
         run: |
-          Copy-Item "artifacts\PulseNet-Broadcaster.exe" "PulseNet-Broadcaster.exe"
+          Copy-Item "artifacts\PulseNet-Player.exe" "PulseNet-Player.exe"
 
       - name: Install WiX Toolset
         run: dotnet tool install --global wix --version "5.*"
@@ -63,7 +63,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            PulseNet-Broadcaster.exe
+            PulseNet-Player.exe
             PulseNet-Setup.msi
           generate_release_notes: true
           draft: false

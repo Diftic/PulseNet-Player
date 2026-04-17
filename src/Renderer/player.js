@@ -1,5 +1,5 @@
 /* ============================================================
-   Pulsenet Radio — player controller
+   PulseNet Player — player controller
    ============================================================ */
 
 (function () {
@@ -257,7 +257,7 @@
   }
 
   function onPlayerError(event) {
-    console.warn('Pulsenet Radio player error:', event.data);
+    console.warn('PulseNet Player error:', event.data);
   }
 
   // Track title polling (API fires no title-change event).

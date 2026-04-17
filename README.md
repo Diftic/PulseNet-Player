@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/Renderer/assets/main_logo.png" alt="PulseNet Radio" width="420">
+  <img src="src/Renderer/assets/main_logo.png" alt="PulseNet Player" width="420">
 </p>
 
 <p align="center">
@@ -11,18 +11,18 @@
   <img src="https://img.shields.io/badge/.NET-9.0-512BD4?style=flat-square&logo=dotnet" alt=".NET 9">
   <img src="https://img.shields.io/badge/platform-Windows-0078D4?style=flat-square&logo=windows" alt="Windows">
   <img src="https://img.shields.io/badge/WebView2-Chromium-green?style=flat-square&logo=googlechrome" alt="WebView2">
-  <img src="https://img.shields.io/github/license/Diftic/pulsenet-radio?style=flat-square" alt="License">
+  <img src="https://img.shields.io/github/license/Diftic/PulseNet-Player?style=flat-square" alt="License">
 </p>
 
 ---
 
 <p align="center">
-  <img src="docs/preview.png" alt="PulseNet Radio overlay in action" width="800">
+  <img src="docs/preview.png" alt="PulseNet Player overlay in action" width="800">
 </p>
 
 ---
 
-**PulseNet Radio** is an always-on-top Windows overlay that brings the Pulse Broadcasting Network directly into your Star Citizen session. A sci-fi framed YouTube radio player that lives at the edge of your screen — 19 stations, one click away, never interrupting your game.
+**PulseNet Player** is an always-on-top Windows overlay that brings the Pulse Broadcasting Network directly into your Star Citizen session. A sci-fi framed YouTube music player that lives at the edge of your screen, 19 stations, one click away, never interrupting your game.
 
 Tune in while you fly. Keep it on while you fight. Let it run while you haul. PulseNet is always broadcasting.
 
@@ -56,9 +56,9 @@ Tune in while you fly. Keep it on while you fight. Let it run while you haul. Pu
 
 ## Installation
 
-1. Download the latest release from the [Releases page](https://github.com/Diftic/pulsenet-radio/releases)
+1. Download the latest release from the [Releases page](https://github.com/Diftic/PulseNet-Player/releases)
 2. Extract the archive to any folder
-3. Run `PulseNet-Broadcaster.exe`
+3. Run `PulseNet-Player.exe`
 
 The overlay will appear immediately. No installer, no configuration required to get started.
 
@@ -119,7 +119,7 @@ PulseNet broadcasts **19 stations** across the full spectrum of the 'Verse. Each
 
 ## Architecture
 
-PulseNet Radio is a **.NET 9 WPF** application. All visual elements — the sci-fi frame, station buttons, YouTube player, and settings panel — live inside a **WebView2** (Chromium) instance rendered as HTML/CSS/JS. This design sidesteps the WPF airspace problem where WebView2's HWND would otherwise always render above WPF visuals, making a native frame impossible.
+PulseNet Player is a **.NET 9 WPF** application. All visual elements, the sci-fi frame, station buttons, YouTube player, and settings panel, live inside a **WebView2** (Chromium) instance rendered as HTML/CSS/JS. This design sidesteps the WPF airspace problem where WebView2's HWND would otherwise always render above WPF visuals, making a native frame impossible.
 
 ### Key Components
 
@@ -213,8 +213,8 @@ Whatever you're doing out there — PulseNet is with you.
 ## Building from Source
 
 ```bash
-git clone https://github.com/Diftic/pulsenet-radio.git
-cd pulsenet-radio
+git clone https://github.com/Diftic/PulseNet-Player.git
+cd PulseNet-Player
 dotnet build src/pulsenet.csproj
 dotnet run --project src/pulsenet.csproj
 ```
@@ -227,7 +227,7 @@ Requires the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0
 
 This project is released under the [MIT License](LICENSE).
 
-*Star Citizen® is a registered trademark of Cloud Imperium Rights LLC. PulseNet Radio is a fan-made project and is not affiliated with or endorsed by Cloud Imperium Games.*
+*Star Citizen® is a registered trademark of Cloud Imperium Rights LLC. PulseNet Player is a fan-made project and is not affiliated with or endorsed by Cloud Imperium Games.*
 
 ---
 
