@@ -42,7 +42,7 @@ jobs:
           Copy-Item "artifacts\PulseNet-Broadcaster.exe" "PulseNet-Broadcaster.exe"
 
       - name: Install WiX Toolset
-        run: dotnet tool install --global wix --version "4.*"
+        run: dotnet tool install --global wix --version "5.*"
 
       - name: Build MSI installer
         shell: pwsh
@@ -52,7 +52,7 @@ jobs:
           Copy-Item "src\Assets\icon.ico" "installer\"
 
           cd installer
-          wix extension add WixToolset.UI.wixext/4.0.5
+          wix extension add WixToolset.UI.wixext/5.0.2
           wix build installer.wxs `
             -ext WixToolset.UI.wixext `
             -o "..\PulseNet-Setup.msi" `
