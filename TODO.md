@@ -63,7 +63,7 @@
 
 
 - `frame_glow.png` referenced in HTML but file not yet created — `onerror` hides it gracefully
-- YouTube share/logo buttons cannot be removed — cross-origin iframe restriction + ToS
+- YouTube share/logo buttons can't be removed (cross-origin iframe + ToS), but `#click-blocker` (60px transparent div over the bottom of the video rect) absorbs the clicks so they can't be interacted with
 - YouTube IFrame API does not fire a title-change event — `getVideoData().title` is polled every 2s while playing
 - WebView2 user data shared across all virtual-host pages — auth persists across restarts
 - If Renderer folder missing at runtime, overlay shows a navigation error page with helpful message
