@@ -56,13 +56,14 @@ Tune in while you fly. Keep it on while you fight. Let it run while you haul. Pu
 
 ## Installation
 
-1. Download the latest release from the [Releases page](https://github.com/Diftic/PulseNet-Player/releases)
-2. Extract the archive to any folder
-3. Run `PulseNet-Player.exe`
+Two download options on the [Releases page](https://github.com/Diftic/PulseNet-Player/releases):
 
-The overlay will appear immediately. No installer, no configuration required to get started.
+- **`PulseNet-Setup.msi`** — Per-user installer. Adds a Start Menu shortcut, a desktop icon, and wires up auto-update. Recommended.
+- **`PulseNet-Player.exe`** — Standalone launcher. Run it directly from any folder, no installation.
 
-> **Portable** — settings are stored in `%APPDATA%\pulsenet-radio\` and the app runs entirely from its own folder.
+Either way, launch the app and the overlay appears immediately. Default toggle hotkey is **F9**.
+
+> Settings are stored in `%APPDATA%\pulsenet-radio\`. Uninstalling the MSI leaves your settings behind; delete the folder manually if you want a clean slate.
 
 ---
 
@@ -189,12 +190,12 @@ All icons live in `src/Renderer/assets/stations/`. Each station requires two fil
 ## Roadmap
 
 - [ ] Wire real YouTube playlist IDs for all 19 stations
-- [ ] Auto-update mechanism — portable `.exe` + `.msi` installer
-- [ ] GitHub Actions CI — automated build and publish on release tag
 - [ ] Volume control — mute/unmute and slider
 - [ ] "Now Playing" tray tooltip
-- [ ] WiX installer
 - [ ] Info / About dialog
+- [x] Auto-update mechanism (in-app check + self-install)
+- [x] GitHub Actions CI — build + publish on tag push
+- [x] WiX installer (`PulseNet-Setup.msi`) + portable `.exe`
 
 ---
 
