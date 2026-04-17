@@ -55,6 +55,7 @@
 - [x] WiX installer — `installer/installer.wxs`, publishes `PulseNet-Setup.msi`
 - [x] Stable asset naming — `PulseNet-Player.exe` + `PulseNet-Setup.msi`
 - [x] **Enable GitHub Pages** — live at https://diftic.github.io/PulseNet-Player/ (branch: master, folder: /docs)
+- [ ] **External beta testing** — 60-day public beta starting 2026-04-18; bump to **v1.0.0** on/after 2026-06-17 for the stable, out-of-beta release
 
 ## Known issues / notes
 
