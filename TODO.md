@@ -50,12 +50,19 @@
 ## Distribution
 
 - [x] **Establish GitHub repo** — https://github.com/Diftic/pulsenet-radio
+- [x] README.md — full project overview, 19-station lineup, architecture, developer guide
+- [x] Sales page — `docs/index.html`, matches SC-HUD design, Coming Soon CTA, no GitHub links
+- [ ] **Enable GitHub Pages** — Repo → Settings → Pages → branch: master, folder: /docs
 - [ ] **Auto-update feature** — port the update mechanism from the Signature Scanner project
 - [ ] Set up GitHub Actions CI (build + publish on tag)
 - [ ] Create WiX installer (based on SC-HUD installer — strip SC-HUD references)
 - [ ] Stable asset naming for auto-update: `pulsenet-portable.exe`, `pulsenet-setup.msi`
 
 ## Known issues / notes
+
+- **SteelSeries Sonar shows "MSEDGEWEBVIEW2"** — Audio is produced by WebView2 child processes (`msedgewebview2.exe`). `IAudioSessionControl::SetDisplayName` works for standard Windows mixers but Sonar reads the process executable name directly. No programmatic fix. Workaround: add a custom app entry in Sonar's mixer UI.
+
+
 
 - `frame_glow.png` referenced in HTML but file not yet created — `onerror` hides it gracefully
 - YouTube share/logo buttons cannot be removed — cross-origin iframe restriction + ToS

@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-04-17 — Session 4 — README, sales page, station count correction
+
+### README.md
+Comprehensive project README written covering: project overview and lore, features list, requirements, installation, usage table, full 19-station lineup (both columns), architecture overview, adding stations / going live guide, roadmap, and build-from-source instructions.
+
+### Sales page (docs/index.html)
+Landing page built matching the SC-HUD design language — dark space theme, cyan accent, star field hero, animated "Coming Soon" badge. Sections: hero with screenshot, stats bar, features grid, full station lineup table, how-it-works steps, settings reference, notes, lore banner, CTA. GitHub references intentionally excluded (no download links, no repo links).
+
+### Promotional screenshot
+`src/Assets/PulseNet Player.png` added — used as the hero image in both the README (`docs/preview.png`) and the sales page.
+
+### Station count corrected to 19
+**PulseNet LIVE** (the home button, top-left) is the 19th station — plays all channels indiscriminately. Each column has 10 buttons (left: PulseNet LIVE + 9 stations; right: 9 stations + Info). All references updated across README, sales page, and station descriptions.
+
+### SteelSeries Sonar audio session rename — investigated, not achievable
+Attempted to rename the WebView2 audio session via `IAudioSessionControl::SetDisplayName` (CoreAudio COM interop) so Sonar would show "PulseNet Player" instead of "MSEDGEWEBVIEW2". Implementation was correct and works for standard Windows audio mixers (EarTrumpet, Windows Volume Mixer), but SteelSeries Sonar reads the process executable name directly and ignores the session display name. Root cause: audio is produced by `msedgewebview2.exe` child processes spawned by WebView2 — this is true regardless of how the host executable is named. No programmatic fix is possible. Code reverted cleanly.
+
+---
+
 ## 2026-04-16 — Session 3 — Special buttons, offline states, mouse hook fix
 
 ### Special utility buttons

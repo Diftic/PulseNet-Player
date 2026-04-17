@@ -22,7 +22,7 @@
 
 ---
 
-**PulseNet Radio** is an always-on-top Windows overlay that brings the Pulse Broadcasting Network directly into your Star Citizen session. A sci-fi framed YouTube radio player that lives at the edge of your screen — 18 curated stations, one click away, never interrupting your game.
+**PulseNet Radio** is an always-on-top Windows overlay that brings the Pulse Broadcasting Network directly into your Star Citizen session. A sci-fi framed YouTube radio player that lives at the edge of your screen — 19 stations, one click away, never interrupting your game.
 
 Tune in while you fly. Keep it on while you fight. Let it run while you haul. PulseNet is always broadcasting.
 
@@ -31,7 +31,7 @@ Tune in while you fly. Keep it on while you fight. Let it run while you haul. Pu
 ## Features
 
 - **Sci-fi overlay frame** — Transparent, always-on-top window styled to fit the Star Citizen aesthetic
-- **18 stations** — A full lineup spanning electronic, classical, industrial, country, hip-hop, ambient, live performances, and more
+- **19 stations** — A full lineup spanning electronic, classical, industrial, country, hip-hop, ambient, live performances, and more
 - **One-click playback** — Station selector buttons on both sides of the frame; click to tune in instantly
 - **Station hover preview** — Hover over any station button to preview its cover art inside the video window
 - **Adjustable opacity** — Fade the overlay to any level without losing interactivity
@@ -84,12 +84,13 @@ The overlay will appear immediately. No installer, no configuration required to 
 
 ## Station Lineup
 
-PulseNet broadcasts **18 stations** across the full spectrum of the 'Verse. Each station has its own sound, its own DJ, and its own story.
+PulseNet broadcasts **19 stations** across the full spectrum of the 'Verse. Each station has its own sound, its own DJ, and its own story.
 
 ### Left Column
 
 | Station | Genre | DJ | Tagline |
 |---------|-------|----|---------|
+| **PulseNet LIVE** | All Channels · Mixed | — | *"Always broadcasting."* |
 | **Alternative Routes** | Alt-Rock · Indie | Eon Lark | *"Find a different path."* |
 | **CrossWind** | Cultural Fusion · World Music | Amara Kade | *"Where worlds meet in rhythm."* |
 | **DeepSky Ambient** | Ambient · Chillwave | Sera Nyx | *"Drift beyond the noise."* |
@@ -126,7 +127,7 @@ PulseNet Radio is a **.NET 9 WPF** application. All visual elements — the sci-
 |-----------|----------|---------|
 | Overlay window | `src/UI/OverlayWindow.xaml.cs` | WPF host, hotkeys, drag engine, tray icon |
 | Renderer | `src/Renderer/` | HTML/CSS/JS UI — frame, buttons, player |
-| Station config | `src/Renderer/stations.js` | All 18 stations: playlist IDs, icons, live flags |
+| Station config | `src/Renderer/stations.js` | All 19 stations: playlist IDs, icons, live flags |
 | Player controller | `src/Renderer/player.js` | YouTube IFrame API, settings bridge to C# |
 | Constants | `src/Constants.cs` | Frame dimensions, default values |
 | Settings model | `src/Models/PulsenetSettings.cs` | Persisted user preferences (JSON) |
@@ -187,7 +188,7 @@ All icons live in `src/Renderer/assets/stations/`. Each station requires two fil
 
 ## Roadmap
 
-- [ ] Wire real YouTube playlist IDs for all 18 stations
+- [ ] Wire real YouTube playlist IDs for all 19 stations
 - [ ] Auto-update mechanism — portable `.exe` + `.msi` installer
 - [ ] GitHub Actions CI — automated build and publish on release tag
 - [ ] Volume control — mute/unmute and slider
