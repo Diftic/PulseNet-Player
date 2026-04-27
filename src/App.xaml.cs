@@ -190,5 +190,10 @@ public partial class App : Application
 
         services.AddSingleton<BrowserSourceServer>();
         services.AddHostedService(p => p.GetRequiredService<BrowserSourceServer>());
+
+        // AudioBridge: WASAPI process-loopback that captures WebView2 audio and
+        // re-emits it from PulseNet-Player.exe so OBS Window Capture's
+        // Capture Audio (BETA) sees PulseNet as an audio-producing process.
+        services.AddHostedService<AudioBridge>();
     }
 }

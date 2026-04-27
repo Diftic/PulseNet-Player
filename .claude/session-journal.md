@@ -3,10 +3,31 @@
 A living journal that persists across compactions. Captures decisions, progress, and context.
 
 ## Current State
-- **Focus:** Implementing OBS Browser Source feature — exposes `/banner` and `/player` over a localhost HTTP server so streamers can add PulseNet to OBS without a Display Capture. Adds "Streamer Options" sub-panel in settings with configurable port.
+- **Focus:** OBS streaming complete — Window Capture (WGC) + WASAPI process-loopback audio bridge proven working end-to-end. Streamer Info panel guides setup. Browser Source server still in tree but unused; planned for removal in a follow-up cleanup pass.
 - **Blocked:** Real playlist IDs for 18 stations not yet provided. `frame_glow.png` asset not yet created.
 
 ## Log
+
+### 2026-04-27 17:50 — Completed: AudioBridge (WASAPI process-loopback re-emit)
+- Problem: OBS Window Capture's "Capture Audio (BETA)" binds to the captured window's process. PulseNet's window is `PulseNet-Player.exe` but its audio is generated entirely by `msedgewebview2.exe` helper PIDs (descendants), so OBS captured silence. Application Audio Capture didn't help either — `msedgewebview2.exe` doesn't appear in its picker on this machine.
+- Solution: new `Services/AudioBridge.cs` (`IHostedService`) plus `PInvoke/AudioBridgeInterop.cs`. Pipeline:
+  1. Polls for the WebView2 root browser child of our PID (image == `msedgewebview2.exe`, parent == self)
+  2. Activates WASAPI process-loopback on that PID with `PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE` via `ActivateAudioInterfaceAsync`(`VAD\Process_Loopback`, IAudioClient, PROPVARIANT(VT_BLOB→AUDIOCLIENT_ACTIVATION_PARAMS))
+  3. Opens a render `IAudioClient` on the default render endpoint, takes its mix format and uses the *same* format for capture init so no resampling is needed in the pump path
+  4. Pump thread (Pro Audio MMCSS priority): block on capture event, drain `IAudioCaptureClient.GetBuffer` packets, copy into `IAudioRenderClient.GetBuffer` slots; capture release happens unconditionally to keep latency low under transient render stalls
+- Verified working: tester's machine in 8-channel 96 kHz 32-bit shared-mode rendering. AudioBridge logged "running" within seconds of launch; OBS Window Capture's Capture Audio (BETA) immediately registered audio levels from `PulseNet-Player.exe`.
+- Trade-off accepted by user: streamer hears doubled audio locally (WebView2 direct + our re-emit). Streamer manages this via OBS per-source audio monitoring controls; viewers receive the clean re-emit only.
+- Streamer Info panel left as-is — Capture Audio (BETA) instruction remains correct now that we actually emit on `PulseNet-Player.exe`.
+
+### 2026-04-27 17:30 — Decision: pivot to Window Capture (solution 1.5) for OBS
+- After the Browser Source approach hit progressively harder sync issues (live mode pause not propagating without YT.Player attach, position sync needing a polling channel, audio doubling between re-emit and direct path), realised the simpler answer: just remove `WS_EX_TOOLWINDOW` from the overlay so OBS lists it, and change F9 to *park off-screen* instead of `Visibility.Collapsed` so DWM keeps rendering it for WGC capture.
+- Implementation in `src/UI/OverlayWindow.xaml.cs`: clear `WS_EX_TOOLWINDOW` in `OnSourceInitialized` (was previously *adding* it); `HideOverlay` now persists current Left/Top then sets `Left = -(FrameDisplayWidth + 100)` instead of `Visibility = Collapsed`. The hidden owner WPF auto-creates from `ShowInTaskbar="False"` keeps it out of Alt+Tab and the taskbar regardless.
+- Streamer Info panel reworked from the old Browser Source URL config into setup steps: Window Capture, capture method = Windows 10 (1903+), Capture Audio (BETA) on, Capture Cursor off, Client Area on, F9 hint.
+- Click-blocker fixes that landed in this pass:
+  - New `#click-blocker-br` (80×50 at right=0 bottom=83px) over the YouTube fullscreen icon in the bottom-right
+  - `#click-blocker` height 60→62 to fully clear hover affordances
+  - `.station-col` got `pointer-events: none` — column boxes were swallowing clicks in the leftmost/rightmost ~37/39px of the video rect because they overlap the video horizontally; buttons inside still set `pointer-events: auto` so they remain clickable
+- Browser Source server (`BrowserSourceServer`, `NowPlayingState`, `Renderer/obs/`) remains in the tree but is dead code — flagged for removal in a follow-up cleanup commit once Window Capture is proven over a few real streaming sessions.
 
 ### 2026-04-27 15:06 — Plan + Started: OBS Browser Source feature
 - Tester reported PulseNet Player invisible to OBS Window/Game Capture (only Display Capture works).
