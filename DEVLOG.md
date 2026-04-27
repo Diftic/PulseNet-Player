@@ -4,6 +4,55 @@
 
 ---
 
+## 2026-04-27 — Session 11 — v1.4.1 — OBS streaming via Window Capture + WASAPI audio bridge
+
+### The problem
+Tester report: streamers can't add PulseNet to OBS unless they capture their entire desktop. Not viable — desktop capture exposes everything else on the streamer's screen (chat windows, browser tabs, etc.). They want PulseNet as a *targeted* OBS source.
+
+Two distinct sub-problems surfaced:
+
+1. **Window-list invisibility.** OBS's Window Capture and Game Capture pickers didn't list `PulseNet Player` at all. Investigation via `EnumWindows` + `GetWindowLongPtr(GWL_EXSTYLE)` confirmed the cause: the overlay window had `WS_EX_TOOLWINDOW` set, both implicitly via XAML `ShowInTaskbar="False"` (WPF auto-applies it) and explicitly in `OnSourceInitialized` "to hide from Alt+Tab". OBS filters tool windows out of its source list by design — they're meant for floating utility palettes, not main app windows. The Alt+Tab hiding goal is independently achieved by the hidden owner window WPF auto-creates from `ShowInTaskbar="False"`, so `WS_EX_TOOLWINDOW` was redundant for that purpose and was the single thing locking streamers out.
+
+2. **Audio invisibility.** Even after fixing #1, OBS Window Capture's "Capture Audio (BETA)" produced silence. The captured window is owned by `PulseNet-Player.exe` but the audio sessions live entirely in `msedgewebview2.exe` helper PIDs — descendants spawned by the WebView2 runtime. Application Audio Capture didn't help either: `msedgewebview2.exe` audio sessions aren't enumerated for it on tester's machine. The `AudioSessionRenamer` already in the codebase paints over the same architectural mismatch in Volume Mixer (renames the display name to "PulseNet Player"); it doesn't move the audio's process ownership.
+
+### The fix — pixel-mirror via Window Capture + audio re-emit
+
+**Window discoverability** (`src/UI/OverlayWindow.xaml.cs`):
+- `OnSourceInitialized` now *clears* `WS_EX_TOOLWINDOW` instead of setting it. Owner-window pattern still keeps the overlay out of Alt+Tab/taskbar without the flag.
+- `HideOverlay` (F9 toggle) used to set `Visibility = Visibility.Collapsed`; now persists current Left/Top to settings then moves the window to `(-(FrameDisplayWidth + 100), 0)`. Window stays `Visibility.Visible`, DWM keeps compositing it, OBS WGC keeps mirroring it pixel-perfect to the broadcast — even though the streamer can no longer see it on their own monitor. F9 to show snaps it back to the saved on-screen position. This is what makes the "hide on streamer's screen / visible on stream" workflow possible: viewers never lose the player when the streamer hides it to clear their game view.
+
+**Audio** (`src/Services/AudioBridge.cs` + `src/PInvoke/AudioBridgeInterop.cs`):
+- New `IHostedService` that captures the WebView2 process tree via WASAPI process-loopback (Windows 10 v2004+ API) and re-emits the audio from `PulseNet-Player.exe` itself, so OBS's process-bound Capture Audio (BETA) sees us as the audio-producing process.
+- Activation path: `ActivateAudioInterfaceAsync(VAD\Process_Loopback, IAudioClient, PROPVARIANT(VT_BLOB → AUDIOCLIENT_ACTIVATION_PARAMS{PROCESS_LOOPBACK, target=webView2RootPid, INCLUDE_TARGET_PROCESS_TREE}))`. The `INCLUDE_TARGET_PROCESS_TREE` flag follows WebView2's helper renderer/audio children dynamically so we don't need to chase individual PIDs as they spawn and die.
+- Capture init reuses the render endpoint's mix format (`IAudioClient.GetMixFormat`), so no resampling happens in the pump path. Tester's machine is in 8-channel 96 kHz 32-bit shared-mode rendering and the bridge handles it without conversion.
+- Pump runs on a background thread bumped to MMCSS "Pro Audio" priority via `AvSetMmThreadCharacteristicsW`. Event-driven via `IAudioClient.SetEventHandle` + `WaitForSingleObject`; drains all available capture packets per wake and copies straight into render buffer slots. Capture release happens unconditionally after every read so transient render stalls drop frames rather than blocking the pipeline.
+- Trade-off accepted: the streamer hears doubled audio locally (WebView2's direct path + our re-emit). They manage that via OBS per-source audio monitoring controls — viewers receive the clean re-emit only.
+
+### Click-blocker tightening
+While the player was now stream-capturable, a few YouTube-chrome leaks became more visible since the broadcast preserves them pixel-for-pixel:
+- New `#click-blocker-br` (80×50 at `right:0; bottom:83px`) over the fullscreen-expand icon YouTube overlays in the bottom-right of embedded videos.
+- `#click-blocker` height bumped 60→62 to fully clear hover affordances.
+- `.station-col` got `pointer-events: none` — the column container boxes were swallowing clicks in the leftmost ~37px and rightmost ~39px of the video rect because they overlap the video horizontally. The buttons inside still set `pointer-events: auto` so they remain clickable.
+
+### Settings panel
+"Streamer Options" (which configured the now-removed Browser Source server) became "Streamer Info": a static instructional sub-panel walking through OBS setup — Window Capture, capture method = Windows 10 (1903 and up), Capture Audio (BETA) on, Capture Cursor off, Client Area on, F9 hint. The panel ID stayed `streamer-settings-panel` for backward compatibility with `BuildSyncScript`'s panel-reset logic.
+
+### Dead code removed
+The Browser Source approach (built in an earlier draft of this session before the Window Capture pivot) is gone:
+- Deleted `src/Services/BrowserSourceServer.cs` (HTTP listener + SSE infrastructure for `/banner`, `/player`, `/events`)
+- Deleted `src/Services/NowPlayingState.cs` (was only an SSE broker between overlay and the server; reverted to direct `overlay → banner` event wiring in `App.xaml.cs`)
+- Deleted `src/Renderer/obs/{player.html,player.css,player.js}` (the OBS-tailored variants)
+- Removed `BrowserSourcePort` from `PulsenetSettings`, `BrowserSourceDefaultPort`/`BrowserSourceLoopback`/`BrowserSourceObsFolder`/`PulsenetBroadcastChannelId` from `Constants`, the `browserSourcePort` and `playerState` web-message handlers from `OverlayWindow`, the `__pulsenetSetStreamerState` JS hook + Streamer Options handlers from `Renderer/player.js`, and the `.streamer-url-input`/`.streamer-status`/`.streamer-copy-btn` CSS rules
+- Net delta from the Browser Source experiment: ~600 lines removed across 10 files
+
+### Version bump
+`v0.4.1 → v1.4.1`. Major bump because the streamer-facing capability is fundamentally new: PulseNet Player is now usable as an OBS source out of the box, both visually (Window Capture) and audibly (process-loopback bridge). Same workflow that previously required Display Capture (with all its privacy trade-offs) now works with a targeted Window Capture source. This is the feature that makes PulseNet viable for its second, non-music use case too — visual cover for stream-sniper-sensitive game info on the broadcast.
+
+### Release
+Tagged `v1.4.1`, pushed. Build & Release workflow publishes `PulseNet-Player.exe` + `PulseNet-Setup.msi` to the GitHub release page; v0.4.x clients see the update banner on next launch.
+
+---
+
 ## 2026-04-22 — Session 10 — v0.4.1 — Full outer frame bezel no longer clipped
 
 ### The bug

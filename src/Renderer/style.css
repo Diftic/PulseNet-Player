@@ -406,44 +406,6 @@ html, body {
   display: none;
 }
 
-.streamer-url-input {
-  flex: 1;
-  min-width: 0;
-  background: rgba(2, 12, 24, 0.80);
-  border: 1px solid rgba(34, 211, 238, 0.30);
-  border-radius: 4px;
-  color: #cfeefa;
-  font-family: 'Consolas', monospace;
-  font-size: 14px;
-  padding: 6px 8px;
-  outline: none;
-}
-
-.streamer-url-input:focus {
-  border-color: rgba(34, 211, 238, 0.60);
-}
-
-.streamer-status {
-  flex: 1;
-  font-size: 13px;
-  color: rgba(207, 238, 250, 0.65);
-  letter-spacing: 0.02em;
-}
-
-.streamer-status.error {
-  color: #ff8888;
-}
-
-.streamer-status.success {
-  color: #88ffaa;
-}
-
-.streamer-copy-btn {
-  flex: 1;
-  width: 100%;
-  text-align: center;
-}
-
 /* Streamer Info panel — instructional content layout */
 .streamer-info-content {
   display: flex;

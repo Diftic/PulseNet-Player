@@ -19,8 +19,6 @@ public partial class OverlayWindow : Window
 {
     private readonly SettingsManager _settings;
     private readonly GlobalHotkeyListener _hotkeyListener;
-    private readonly BrowserSourceServer _browserSourceServer;
-    private readonly NowPlayingState _nowPlayingState;
     private readonly ILogger<OverlayWindow> _logger;
 
     private HWND _hwnd;
@@ -84,20 +82,15 @@ public partial class OverlayWindow : Window
     public OverlayWindow(
         SettingsManager settings,
         GlobalHotkeyListener hotkeyListener,
-        BrowserSourceServer browserSourceServer,
-        NowPlayingState nowPlayingState,
         ILogger<OverlayWindow> logger)
     {
         _settings = settings;
         _hotkeyListener = hotkeyListener;
-        _browserSourceServer = browserSourceServer;
-        _nowPlayingState = nowPlayingState;
         _logger = logger;
 
         InitializeComponent();
 
         _settings.SettingsChanged += OnSettingsChanged;
-        _browserSourceServer.BindStateChanged += OnBrowserSourceBindStateChanged;
     }
 
     public void Toggle()
@@ -196,7 +189,6 @@ public partial class OverlayWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _settings.SettingsChanged -= OnSettingsChanged;
-        _browserSourceServer.BindStateChanged -= OnBrowserSourceBindStateChanged;
         StopMouseHook();
         StopKeyboardHook();
         base.OnClosed(e);
@@ -283,18 +275,6 @@ public partial class OverlayWindow : Window
 
             if (_webViewReady && _loadedChannelId != settings.YoutubeChannelId)
                 RestartNavigation(BuildPlayerUrl(settings.YoutubeChannelId));
-        });
-    }
-
-    private void OnBrowserSourceBindStateChanged(int port, bool success)
-    {
-        if (!_webViewReady) return;
-        var status = success ? "listening" : "failed";
-        var script = $"window.__pulsenetSetStreamerState && window.__pulsenetSetStreamerState({port}, '{status}');";
-        Dispatcher.InvokeAsync(() =>
-        {
-            try { _ = WebView.CoreWebView2.ExecuteScriptAsync(script); }
-            catch (Exception ex) { _logger.LogDebug("Streamer state push failed: {Ex}", ex.Message); }
         });
     }
 
@@ -503,22 +483,6 @@ public partial class OverlayWindow : Window
                         _settings.Save(_settings.Current with { ToggleHotkey = shortcut });
                     break;
 
-                case "browserSourcePort":
-                    var port = root.GetProperty("value").GetInt32();
-                    if (port is >= 1024 and <= 65535)
-                        _settings.Save(_settings.Current with { BrowserSourcePort = port });
-                    break;
-
-                case "playerState":
-                    // Renderer pushes this whenever YT.Player.onStateChange fires
-                    // or it transitions in/out of live_stream mode. The
-                    // overlay-visibility gate in NowPlayingState combines this
-                    // with the F9 show/hide signal so a stale "playing" flag
-                    // can't keep OBS streaming while the overlay is hidden.
-                    var playing = root.GetProperty("playing").GetBoolean();
-                    _nowPlayingState.SetContentPlaying(playing);
-                    break;
-
             }
         }
         catch (Exception ex)
@@ -556,10 +520,6 @@ public partial class OverlayWindow : Window
         var bannerLockText = s.BannerLocked
             ? "\\uD83D\\uDD12 Banner locked"
             : "\\uD83D\\uDD13 Banner unlocked";
-        int browserPort = _browserSourceServer.IsListening
-            ? _browserSourceServer.BoundPort
-            : s.BrowserSourcePort;
-        var browserStatus = _browserSourceServer.IsListening ? "listening" : "failed";
         return $"(function(){{" +
                $"var os=document.getElementById('opacity-slider');" +
                $"var ov=document.getElementById('opacity-val');" +
@@ -580,7 +540,6 @@ public partial class OverlayWindow : Window
                $"if(bsc)bsc.value={bannerScale};" +
                $"if(bos){{bos.value={bannerOp};if(bov)bov.textContent='{bannerOp}%';}}" +
                $"if(blb){{blb.textContent='{bannerLockText}';blb.classList.toggle('locked',{(s.BannerLocked ? "true" : "false")});}}" +
-               $"if(window.__pulsenetSetStreamerState)window.__pulsenetSetStreamerState({browserPort},'{browserStatus}');" +
                // Reset to main settings page when overlay re-opens.
                $"if(sp)sp.classList.add('hidden');" +
                $"if(mp)mp.classList.add('hidden');" +
