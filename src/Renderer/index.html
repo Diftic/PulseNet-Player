@@ -111,30 +111,41 @@
       </div>
     </div>
 
-    <!-- Layer 5c: Streamer Info sub-panel — instructions for adding the player
-         to streaming software via window capture. -->
+    <!-- Layer 5c: Streamer Info sub-panel — OBS setup walkthrough. PulseNet
+         exposes video via the player window (Window Capture) and audio via a
+         dedicated localhost HTTP stream (Media Source). The two sources stay
+         in sync via OBS itself, with one playback control surface (this app). -->
     <div id="streamer-settings-panel" class="hidden">
       <div class="settings-row">
         <button id="streamer-back-btn" class="settings-action-btn">&#x2190; Back</button>
       </div>
-      <div class="settings-row streamer-mode-row">
-        <label class="streamer-mode-label">
-          <input type="checkbox" id="streamer-mode-toggle">
-          <span><strong>Enable streamer mode</strong> &mdash; creates an audio bridge OBS can capture. Leave off if you're just listening to music.</span>
-        </label>
-      </div>
       <div class="streamer-info-content">
         <p class="streamer-info-heading">Stream PulseNet with OBS Studio</p>
-        <ol class="streamer-info-steps">
-          <li>In OBS, add a <strong>Window Capture</strong> source.</li>
+        <p class="streamer-info-intro">PulseNet streams video through the player window and audio through a dedicated localhost feed only OBS can reach. Add two sources in OBS:</p>
+
+        <p class="streamer-info-section">1. Video &mdash; Window Capture</p>
+        <ol class="streamer-info-steps" start="1">
+          <li>Add a <strong>Window Capture</strong> source.</li>
           <li>Set <strong>Window</strong> to <em>PulseNet Player</em>.</li>
           <li>Set <strong>Capture Method</strong> to <em>Windows 10 (1903 and up)</em>.</li>
-          <li>Tick <strong>Capture Audio (BETA)</strong> to bring the player's audio into the broadcast.</li>
-          <li>Untick <strong>Capture Cursor</strong> to keep your mouse out of the broadcast.</li>
+          <li>Untick <strong>Capture Cursor</strong>.</li>
           <li>Tick <strong>Client Area</strong>.</li>
-          <li>Open OBS &rarr; <strong>Edit</strong> &rarr; <strong>Advanced Audio Properties</strong>. For your Window Capture source, set <strong>Audio Monitoring</strong> to <em>Monitor Off</em> &mdash; this stops the broadcast audio echoing back into your headphones.</li>
+          <li>Leave <strong>Capture Audio (BETA)</strong> <em>unticked</em> &mdash; audio comes from the next source.</li>
         </ol>
-        <p class="streamer-info-tip"><strong>Using SteelSeries Sonar / Voicemeeter / Wavelink?</strong> Two sessions appear in your <em>Media</em> channel at startup: <strong>PULSENET-PLAYER</strong> (the broadcast-clean re-emit) and <strong>MSEDGEWEBVIEW2</strong> (the original browser audio). Click the speaker icon next to MSEDGEWEBVIEW2 to mute it. You'll then hear only the PULSENET-PLAYER copy, and your broadcast captures the clean stream. Avoid dragging entries between channels; some routing apps will create stuck phantom duplicates. If the audio sounds quiet, check the Media channel's volume slider before reaching for Windows volume.</p>
+
+        <p class="streamer-info-section">2. Audio &mdash; Media Source</p>
+        <ol class="streamer-info-steps" start="7">
+          <li>Add a <strong>Media Source</strong>.</li>
+          <li>Untick <strong>Local File</strong>.</li>
+          <li>Paste this into <strong>Input</strong>:
+            <span class="stream-url-row">
+              <code class="stream-url">http://127.0.0.1:17329/stream.wav</code>
+              <button id="copy-stream-url-btn" class="settings-action-btn stream-url-copy" data-url="http://127.0.0.1:17329/stream.wav">Copy URL</button>
+            </span>
+          </li>
+          <li>Tick <strong>Restart playback when source becomes active</strong>.</li>
+        </ol>
+
         <p class="streamer-info-tip">Press <strong>F9</strong> to hide the player from your monitor &mdash; viewers still see it in your stream.</p>
       </div>
     </div>

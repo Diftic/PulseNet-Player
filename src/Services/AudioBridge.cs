@@ -10,31 +10,34 @@ using static PInvoke.AudioSessionInterop;
 
 /// <summary>
 /// Captures audio from our WebView2 child processes via WASAPI process-loopback
-/// (Windows 10 v2004+) and re-emits it from <c>PulseNet-Player.exe</c>'s own audio
-/// session, so OBS Window Capture's "Capture Audio (BETA)" picks it up.
+/// (Windows 10 v2004+) and forwards the PCM to <see cref="LocalAudioStreamServer"/>
+/// for OBS Media Source consumption.
 ///
-/// Without this, the audio sessions live in <c>msedgewebview2.exe</c> helper PIDs
-/// that are invisible to OBS's window-bound process-audio capture, and the
-/// streamer's broadcast contains no music. The streamer's local listening
-/// experience is unaffected — they still hear WebView2's direct path; the
-/// re-emit is a *parallel* audio track. They control its presence in their
-/// own headphones via OBS's per-source audio monitoring controls.
+/// The local listening path is unaffected — the user hears WebView2's audio
+/// through Windows' default endpoint as normal. The bridge is purely a
+/// capture-and-forward stage; it doesn't render anywhere audible itself, so
+/// running it imposes no per-machine audio-routing requirement on listeners.
 ///
 /// Lifecycle: starts at app startup, polls until WebView2 has spawned, then
-/// runs the capture-and-render pump until cancellation. On any error the pump
-/// returns and the outer loop retries with a fresh PID lookup.
+/// runs the capture pump until cancellation. On any error the pump returns
+/// and the outer loop retries with a fresh PID lookup.
 /// </summary>
 internal sealed class AudioBridge : IHostedService, IDisposable
 {
     private readonly ILogger<AudioBridge> _logger;
     private readonly SettingsManager _settings;
+    private readonly LocalAudioStreamServer _streamServer;
     private readonly uint _ownPid;
     private CancellationTokenSource? _cts;
     private Thread? _pumpThread;
 
-    public AudioBridge(SettingsManager settings, ILogger<AudioBridge> logger)
+    public AudioBridge(
+        SettingsManager settings,
+        LocalAudioStreamServer streamServer,
+        ILogger<AudioBridge> logger)
     {
         _settings = settings;
+        _streamServer = streamServer;
         _logger = logger;
         _ownPid = (uint)Environment.ProcessId;
     }
@@ -68,16 +71,6 @@ internal sealed class AudioBridge : IHostedService, IDisposable
         {
             while (!token.IsCancellationRequested)
             {
-                // Streamer Mode gate. Default off so non-streaming users don't
-                // hear doubled audio (WebView2 direct + AudioBridge re-emit).
-                // Streamers enable it from the Streamer Info panel; disabling
-                // breaks RunOnce out via the same setting check in its loop.
-                if (!_settings.Current.StreamerModeEnabled)
-                {
-                    Thread.Sleep(500);
-                    continue;
-                }
-
                 if (!TryFindWebView2RootPid(out var webView2Pid))
                 {
                     Thread.Sleep(500);
@@ -98,24 +91,26 @@ internal sealed class AudioBridge : IHostedService, IDisposable
     }
 
     /// <summary>
-    /// One full run: open capture and render, pump until error or cancellation.
-    /// Returns true on graceful exit, false on error so the outer loop retries.
+    /// One full run: open capture, push packets to the local stream server until
+    /// error or cancellation. Returns true on graceful exit, false on error so
+    /// the outer loop retries with a fresh PID lookup.
     /// </summary>
     private bool RunOnce(uint webView2Pid, CancellationToken token)
     {
-        IntPtr renderEvent = IntPtr.Zero;
         IntPtr captureEvent = IntPtr.Zero;
         IntPtr mmcssHandle = IntPtr.Zero;
         IntPtr mixFormat = IntPtr.Zero;
         IAudioClient? captureClient = null;
-        IAudioClient? renderClient = null;
+        IAudioClient? formatProbe = null;
         IAudioCaptureClient? cap = null;
-        IAudioRenderClient? rend = null;
 
         try
         {
-            // 1. Default render endpoint + its mix format. We use the same format
-            //    on both sides so no resampling is needed in the pump path.
+            // Read the default render endpoint's mix format. Process-loopback
+            // delivers samples in whatever format we pass to Initialize; using
+            // the system mix format means Windows' audio engine does no
+            // resampling on our side. We Activate but never Initialize/Start
+            // this client — it's only used to read GetMixFormat.
             var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
             if (enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eConsole, out var renderDevice) != 0
                 || renderDevice is null)
@@ -125,78 +120,49 @@ internal sealed class AudioBridge : IHostedService, IDisposable
             }
 
             var iidAudioClient = IID_IAudioClient;
-            if (renderDevice.Activate(ref iidAudioClient, CLSCTX_ALL, IntPtr.Zero, out var renderObj) != 0
-                || renderObj is null)
+            if (renderDevice.Activate(ref iidAudioClient, CLSCTX_ALL, IntPtr.Zero, out var probeObj) != 0
+                || probeObj is null)
             {
                 _logger.LogWarning("Failed to activate IAudioClient on render endpoint");
                 return false;
             }
-            renderClient = (IAudioClient)renderObj;
+            formatProbe = (IAudioClient)probeObj;
 
-            if (renderClient.GetMixFormat(out mixFormat) != 0 || mixFormat == IntPtr.Zero)
+            if (formatProbe.GetMixFormat(out mixFormat) != 0 || mixFormat == IntPtr.Zero)
             {
                 _logger.LogWarning("Failed to get render mix format");
                 return false;
             }
 
             var wfx = Marshal.PtrToStructure<WAVEFORMATEX>(mixFormat);
-            int frameSize = wfx.nBlockAlign;
+            int srcChannels = wfx.nChannels;
+            // Mix-format detection. WebView2 typically lands at 32-bit IEEE float
+            // (either WAVE_FORMAT_IEEE_FLOAT directly or WAVE_FORMAT_EXTENSIBLE
+            // with KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, distinguishable by 32-bit
+            // sample size since Windows mixers don't use 32-bit integer PCM).
+            bool srcIsFloat = wfx.wBitsPerSample == 32;
             _logger.LogInformation(
                 "AudioBridge mix format: tag=0x{Tag:X4} channels={Ch} rate={Rate} bits={Bits} blockAlign={BA}",
                 wfx.wFormatTag, wfx.nChannels, wfx.nSamplesPerSec, wfx.wBitsPerSample, wfx.nBlockAlign);
 
-            // 2. Declare audio category BEFORE Initialize so Sonar/Wavelink/etc.
-            //    classify our session as media playback (MEDIA channel) rather
-            //    than guessing GAME and then locking the controls because the
-            //    classification couldn't be applied retroactively. Same QI
-            //    object as IAudioClient — IAudioClient2 inherits it.
-            if (renderObj is IAudioClient2 renderClient2)
-            {
-                var props = new AudioClientProperties
-                {
-                    cbSize     = (uint)Marshal.SizeOf<AudioClientProperties>(),
-                    bIsOffload = false,
-                    eCategory  = AudioStreamCategory.Media,
-                    Options    = AudioStreamOptions.None,
-                };
-                var hrProps = renderClient2.SetClientProperties(ref props);
-                if (hrProps != 0)
-                    _logger.LogDebug("SetClientProperties returned 0x{Hr:X8}", hrProps);
-            }
+            // Tell the local stream server what sample rate to advertise in its
+            // WAV header. Output is fixed at 16-bit PCM stereo regardless of the
+            // capture-side bit depth or channel count — see PushToStream below.
+            _streamServer.SetFormat((int)wfx.nSamplesPerSec);
 
-            // 3. Initialize render client (event-driven, shared mode). Passing
-            //    bufferDuration = 0 in shared+event mode makes Windows pick the
-            //    audio engine's minimum period (typically ~10ms vs 20ms+ if we
-            //    requested explicitly). Half the latency = closer to in-phase
-            //    with WebView2's direct path = inaudible doubling instead of
-            //    audible echo on the streamer's headphones.
-            renderEvent = CreateEventW(IntPtr.Zero, false, false, IntPtr.Zero);
-            var hr = renderClient.Initialize(
-                AUDCLNT_SHAREMODE_SHARED,
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                0,
-                0,
-                mixFormat,
-                IntPtr.Zero);
-            if (hr != 0) { _logger.LogWarning("Render init failed: 0x{Hr:X8}", hr); return false; }
-            renderClient.SetEventHandle(renderEvent);
+            // Reusable conversion buffer sized for one mix-format period (~10ms).
+            // 10ms * 48000hz * 2ch * 2bytes = 1920 bytes typically, 8x that for
+            // 96kHz 8ch sources. 16KB covers both with headroom.
+            byte[] streamBuf = new byte[16 * 1024];
 
-            var iidRender = IID_IAudioRenderClient;
-            renderClient.GetService(ref iidRender, out var renderSvc);
-            rend = (IAudioRenderClient)renderSvc;
-
-            if (renderClient.GetBufferSize(out var renderBufferFrames) != 0)
-            {
-                _logger.LogWarning("Render GetBufferSize failed");
-                return false;
-            }
-
-            // 3. Activate process-loopback capture targeting WebView2 + descendants.
+            // Activate process-loopback capture targeting WebView2 + descendants.
             captureClient = ActivateProcessLoopback(webView2Pid);
             if (captureClient is null) return false;
 
-            // Same Media-category declaration as the render client so this
-            // session also lands in Sonar's MEDIA channel rather than AUX/Other.
+            // Declare Media category before Initialize. Process-loopback capture
+            // doesn't itself reach the user's speakers, but app-aware routers
+            // sometimes inspect the capture session for classification — leaving
+            // it as Other has caused AUX-channel misclassification in the past.
             if (captureClient is IAudioClient2 captureClient2)
             {
                 var capProps = new AudioClientProperties
@@ -212,7 +178,7 @@ internal sealed class AudioBridge : IHostedService, IDisposable
             }
 
             captureEvent = CreateEventW(IntPtr.Zero, false, false, IntPtr.Zero);
-            hr = captureClient.Initialize(
+            var hr = captureClient.Initialize(
                 AUDCLNT_SHAREMODE_SHARED,
                 AUDCLNT_STREAMFLAGS_LOOPBACK | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                 0,
@@ -226,26 +192,17 @@ internal sealed class AudioBridge : IHostedService, IDisposable
             captureClient.GetService(ref iidCapture, out var captureSvc);
             cap = (IAudioCaptureClient)captureSvc;
 
-            // 4. Bump thread priority for low-latency audio.
             uint mmcssIndex = 0;
             mmcssHandle = AvSetMmThreadCharacteristicsW("Pro Audio", ref mmcssIndex);
 
-            // 5. Pre-fill render with one buffer of silence so it has something
-            //    to play immediately when started.
-            if (rend.GetBuffer(renderBufferFrames, out var prefillPtr) == 0 && prefillPtr != IntPtr.Zero)
-            {
-                rend.ReleaseBuffer(renderBufferFrames, AUDCLNT_BUFFERFLAGS_SILENT);
-            }
-
-            // 6. Start both clients.
             captureClient.Start();
-            renderClient.Start();
-            _logger.LogInformation("AudioBridge running");
+            _logger.LogInformation("AudioBridge running (capture-only, streaming to localhost server)");
 
-            // 7. Pump loop: block on capture event, drain capture, copy into render.
-            //    Also re-checks StreamerModeEnabled each iteration so toggling
-            //    the setting off mid-playback tears the bridge down within ~200ms.
-            while (!token.IsCancellationRequested && _settings.Current.StreamerModeEnabled)
+            // Pump loop: block on capture event, drain capture, push packets to
+            // the local stream server. No render side — listeners hear WebView2
+            // directly through Windows' default endpoint as normal, OBS pulls
+            // the same audio over http://127.0.0.1:17329/stream.wav.
+            while (!token.IsCancellationRequested)
             {
                 var waitResult = WaitForSingleObject(captureEvent, 200);
                 if (waitResult == WAIT_TIMEOUT) continue;
@@ -260,40 +217,8 @@ internal sealed class AudioBridge : IHostedService, IDisposable
                     if (cap.GetBuffer(out var capPtr, out var numFrames, out var capFlags, out _, out _) != 0) break;
                     if (numFrames == 0) { cap.ReleaseBuffer(0); continue; }
 
-                    if (renderClient.GetCurrentPadding(out var padding) != 0)
-                    {
-                        cap.ReleaseBuffer(numFrames);
-                        break;
-                    }
-                    var renderFree = renderBufferFrames - padding;
-                    var framesToWrite = Math.Min(numFrames, renderFree);
-
-                    if (framesToWrite > 0
-                        && rend.GetBuffer(framesToWrite, out var renderPtr) == 0
-                        && renderPtr != IntPtr.Zero)
-                    {
-                        bool silent = (capFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0;
-                        if (silent || capPtr == IntPtr.Zero)
-                        {
-                            rend.ReleaseBuffer(framesToWrite, AUDCLNT_BUFFERFLAGS_SILENT);
-                        }
-                        else
-                        {
-                            unsafe
-                            {
-                                Buffer.MemoryCopy(
-                                    (void*)capPtr,
-                                    (void*)renderPtr,
-                                    (long)framesToWrite * frameSize,
-                                    (long)framesToWrite * frameSize);
-                            }
-                            rend.ReleaseBuffer(framesToWrite, 0);
-                        }
-                    }
-
-                    // Always release the capture buffer with the full count we read,
-                    // even if we couldn't fit it all into render — dropping rather
-                    // than blocking keeps latency low under transient render stalls.
+                    bool silent = (capFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0;
+                    PushToStream(capPtr, numFrames, silent, srcIsFloat, srcChannels, streamBuf);
                     cap.ReleaseBuffer(numFrames);
                 }
             }
@@ -308,16 +233,79 @@ internal sealed class AudioBridge : IHostedService, IDisposable
         finally
         {
             try { captureClient?.Stop(); } catch { /* ignore */ }
-            try { renderClient?.Stop(); } catch { /* ignore */ }
             if (cap is not null)            Marshal.ReleaseComObject(cap);
-            if (rend is not null)           Marshal.ReleaseComObject(rend);
             if (captureClient is not null)  Marshal.ReleaseComObject(captureClient);
-            if (renderClient is not null)   Marshal.ReleaseComObject(renderClient);
+            if (formatProbe is not null)    Marshal.ReleaseComObject(formatProbe);
             if (mixFormat != IntPtr.Zero)   CoTaskMemFree(mixFormat);
-            if (renderEvent != IntPtr.Zero) CloseHandle(renderEvent);
             if (captureEvent != IntPtr.Zero) CloseHandle(captureEvent);
             if (mmcssHandle != IntPtr.Zero) AvRevertMmThreadCharacteristics(mmcssHandle);
         }
+    }
+
+    /// <summary>
+    /// Convert one captured packet into 16-bit signed PCM stereo and push it to
+    /// the local stream server. Source layout depends on the WebView2 mix format
+    /// (typically 32-bit float, 2-8 channels); we downmix anything beyond stereo
+    /// to L/R by taking the first two channels. Silent packets become zero bytes
+    /// so OBS keeps consuming a continuous stream.
+    /// </summary>
+    private void PushToStream(
+        IntPtr capPtr,
+        uint numFrames,
+        bool silent,
+        bool srcIsFloat,
+        int srcChannels,
+        byte[] scratch)
+    {
+        int outBytes = (int)numFrames * 2 * sizeof(short);
+        if (outBytes <= 0 || outBytes > scratch.Length) return;
+
+        if (silent || capPtr == IntPtr.Zero)
+        {
+            Array.Clear(scratch, 0, outBytes);
+            _streamServer.Write(scratch.AsSpan(0, outBytes));
+            return;
+        }
+
+        var dst = MemoryMarshal.Cast<byte, short>(scratch.AsSpan(0, outBytes));
+
+        if (srcIsFloat)
+        {
+            unsafe
+            {
+                var src = new ReadOnlySpan<float>((void*)capPtr, (int)numFrames * srcChannels);
+                for (int f = 0; f < numFrames; f++)
+                {
+                    float l = src[f * srcChannels];
+                    float r = srcChannels >= 2 ? src[f * srcChannels + 1] : l;
+                    dst[f * 2]     = ClampToS16(l);
+                    dst[f * 2 + 1] = ClampToS16(r);
+                }
+            }
+        }
+        else
+        {
+            // 16-bit integer source. Pass through L/R, downmix-by-truncation.
+            unsafe
+            {
+                var src = new ReadOnlySpan<short>((void*)capPtr, (int)numFrames * srcChannels);
+                for (int f = 0; f < numFrames; f++)
+                {
+                    dst[f * 2]     = src[f * srcChannels];
+                    dst[f * 2 + 1] = srcChannels >= 2 ? src[f * srcChannels + 1] : src[f * srcChannels];
+                }
+            }
+        }
+
+        _streamServer.Write(scratch.AsSpan(0, outBytes));
+    }
+
+    private static short ClampToS16(float f)
+    {
+        int v = (int)(f * 32767f);
+        if (v >  short.MaxValue) return short.MaxValue;
+        if (v <  short.MinValue) return short.MinValue;
+        return (short)v;
     }
 
     private IAudioClient? ActivateProcessLoopback(uint targetPid)

@@ -388,32 +388,45 @@ html, body {
   display: none;
 }
 
-/* Streamer Mode toggle row — sits above the OBS instructions */
-.streamer-mode-row {
-  padding: 12px;
-  background: rgba(34, 211, 238, 0.06);
-  border: 1px solid rgba(34, 211, 238, 0.22);
-  border-radius: 8px;
-}
-
-.streamer-mode-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
+/* Streamer Info — section headers separating Video and Audio source setup */
+.streamer-info-section {
   font-size: 13px;
-  color: #cfeefa;
-  line-height: 1.5;
-}
-
-.streamer-mode-label input[type="checkbox"] {
-  margin-top: 3px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.streamer-mode-label strong {
+  font-weight: 600;
   color: #22d3ee;
+  margin: 6px 0 0;
+  letter-spacing: 0.02em;
+}
+
+.streamer-info-intro {
+  font-size: 12px;
+  color: #cfeefa;
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* Stream URL display + Copy button inline within the OL step */
+.stream-url-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.stream-url {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 6px;
+  color: #cfeefa;
+  user-select: all;
+}
+
+.stream-url-copy {
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 /* Streamer Info panel — instructional content layout */
@@ -436,7 +449,7 @@ html, body {
   padding-left: 22px;
   color: #cfeefa;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.25;
 }
 
 .streamer-info-steps li {
@@ -458,7 +471,7 @@ html, body {
   color: rgba(207, 238, 250, 0.70);
   border-top: 1px solid rgba(34, 211, 238, 0.20);
   padding-top: 12px;
-  line-height: 1.5;
+  line-height: 1.15;
 }
 
 .streamer-info-tip strong {

@@ -43,7 +43,7 @@ Tune in while you fly. Keep it on while you fight. Let it run while you haul. Pu
 - **Global scroll passthrough** — Scroll wheel is only consumed when the cursor is over the overlay
 - **Now Playing mini banner** — Compact "currently playing" banner stays visible when the overlay is hidden, so you always know the track without bringing the full frame back up
 - **Minimize behaviour** — Choose between minimizing to the system tray or to the mini banner; the toggle hotkey switches between full overlay and your chosen minimized state
-- **OBS streaming support** — Frame is capturable via OBS Window Capture (WGC); a built-in WASAPI audio bridge re-emits the player's audio on the `PulseNet-Player.exe` process so OBS Capture Audio (BETA) can pick it up directly. Opt-in *Streamer Mode* keeps the bridge dormant for non-streamers
+- **OBS streaming support** — Frame is capturable via OBS Window Capture (WGC); audio is exposed as a dedicated localhost stream (`http://127.0.0.1:17329/stream.wav`) that OBS picks up via a Media Source. No third-party audio routing required, no doubled local audio, no setup toggle &mdash; the bridge is always on, but only OBS hears it
 - **Auto-update** — Checks GitHub Releases on launch and offers an in-place update; a manual *Check for updates* button in Settings retriggers the check on demand
 
 ---
@@ -84,7 +84,7 @@ Either way, launch the app and the overlay appears immediately. Default toggle h
 | Lock position | **Settings Menu** → **Lock / Unlock** |
 | Choose minimize behaviour (tray / banner) | **Settings Menu** → **Miniplayer Settings** → minimize mode |
 | Reposition / lock the mini banner | **Settings Menu** → **Miniplayer Settings** |
-| Configure OBS streaming | **Settings Menu** → **Streamer Info** *(includes the Streamer Mode toggle)* |
+| Configure OBS streaming | **Settings Menu** → **Streamer Info** *(walkthrough + Copy URL button)* |
 | Check for updates manually | **Settings Menu** → **vX.Y.Z — Check for updates** |
 | Exit | Right-click tray icon → **Quit** |
 
@@ -138,7 +138,8 @@ PulseNet Player is a **.NET 9 WPF** application. All visual elements, the sci-fi
 | Renderer | `src/Renderer/` | HTML/CSS/JS UI — frame, buttons, player |
 | Station config | `src/Renderer/stations.js` | All 19 stations: playlist IDs, icons, live flags |
 | Player controller | `src/Renderer/player.js` | YouTube IFrame API, settings bridge to C# |
-| Audio bridge | `src/Services/AudioBridge.cs` | WASAPI process-loopback re-emit so OBS Capture Audio (BETA) can pick up the WebView2 audio on `PulseNet-Player.exe` |
+| Audio bridge | `src/Services/AudioBridge.cs` | WASAPI process-loopback capture from WebView2; forwards PCM to `LocalAudioStreamServer` |
+| Stream server | `src/Services/LocalAudioStreamServer.cs` | Loopback HTTP server exposing captured PCM as endless WAV at `http://127.0.0.1:17329/stream.wav` for OBS Media Source |
 | Update checker | `src/Services/UpdateChecker.cs` | Polls GitHub Releases for a newer version |
 | Self-update service | `src/Services/SelfUpdateService.cs` | Downloads the new exe, swaps in place, restarts |
 | Constants | `src/Constants.cs` | Frame dimensions, default values |
@@ -204,7 +205,7 @@ All icons live in `src/Renderer/assets/stations/`. Each station requires two fil
 - [x] Volume control — provided by the embedded YouTube player
 - [x] "Now Playing" info — track title shown inside the YouTube embed
 - [x] "Now Playing" mini banner — persistent compact track readout while the overlay is hidden
-- [x] OBS streaming support — Window Capture (WGC) + WASAPI process-loopback audio bridge with opt-in *Streamer Mode*
+- [x] OBS streaming support — Window Capture (WGC) for video + dedicated localhost audio stream (`http://127.0.0.1:17329/stream.wav`) consumed by OBS Media Source
 - [x] Auto-update mechanism (in-app check on launch + manual recheck button + self-install)
 - [x] GitHub Actions CI — build + publish on tag push
 - [x] WiX installer (`PulseNet-Setup.msi`) + portable `.exe`

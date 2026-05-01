@@ -4,6 +4,49 @@
 
 ---
 
+## 2026-05-01 — Session 16 — v1.8.0 — Localhost audio stream replaces dual-render bridge
+
+### Background
+v1.6.3 shipped the dual-render audio bridge: WebView2 audio captured via process-loopback and re-emitted from `PulseNet-Player.exe`'s own session so OBS Window Capture's Capture Audio (BETA) could see it. The cost was doubled local audio for any streamer not running an app router (Sonar / Voicemeeter / Wavelink), gated behind a default-off `StreamerModeEnabled` toggle. This session replaces the whole architecture.
+
+### Architecture change
+WebView2 still plays through the system default endpoint. The bridge no longer renders anywhere — it captures and forwards the PCM to a new `LocalAudioStreamServer` that exposes `http://127.0.0.1:17329/stream.wav` to OBS Media Source. OBS gets a dedicated audio channel; the listener hears WebView2 directly through Windows as normal. Single audio path locally. No doubling. No app-router workflow.
+
+### Why this works where v1.4.x's BrowserSourceServer didn't
+The previous "audio for OBS over localhost" attempt hosted a YouTube player iframe in OBS Browser Source — two YouTube players (one in PulseNet, one in OBS) had to stay in sync with no control channel between them. Pause/skip in PulseNet didn't propagate. Killed.
+
+The new design has only one YouTube player. OBS is a passive listener consuming whatever PCM the bridge captures from PulseNet's WebView2. Pause in PulseNet → loopback packets go silent → stream goes silent → viewers hear silence. Skip station → WebView2 swaps videos → capture picks up the new audio → stream carries it through. Nothing in OBS could desync because nothing in OBS is making playback decisions. Confirmed end-to-end during testing: control retention works.
+
+### Components
+- `LocalAudioStreamServer` (new) — `IHostedService`, `TcpListener` on `127.0.0.1:17329`. Accepts a single HTTP GET, writes a WAV header with a fake-huge data chunk (`0x7FFFFFFF`), then drains 16-bit stereo PCM forever from the bridge.
+- `AudioBridge` (rewritten) — capture-only. Render-device `IAudioClient` Activate stays just to read `GetMixFormat` (we need a format to pass into the capture client's `Initialize`); `Initialize`/`Start` of a render session are gone. Pump loop pushes captured packets to the stream server with on-the-fly conversion (32-bit float → 16-bit, downmix to stereo).
+
+### What got deleted
+- `StreamerModeEnabled` field from `PulsenetSettings`.
+- `streamerMode` web-message case in `OverlayWindow.OnWebMessageReceived` plus the toggle sync in `BuildSyncScript`.
+- Streamer Mode checkbox row in `index.html`, `streamerModeToggle` wiring in `player.js`.
+- `streamer-mode-row` / `streamer-mode-label` CSS rules.
+- The Sonar / Voicemeeter / Wavelink walkthrough paragraph in Streamer Info — irrelevant once we're not asking the user to deal with two render sessions.
+
+Existing v1.6.x `settings.json` files keep `StreamerModeEnabled` until the next save (System.Text.Json ignores unknown properties on deserialize), at which point the field disappears naturally.
+
+### Streamer Info panel rewrite
+Two-section walkthrough. **1. Video — Window Capture** keeps steps 1-6 but explicitly says to leave Capture Audio (BETA) *unticked* since audio comes from the next source. **2. Audio — Media Source** is the new section: add a Media Source, untick Local File, paste `http://127.0.0.1:17329/stream.wav` into Input. Inline Copy URL button next to the URL display flashes "Copied!" via `navigator.clipboard.writeText`. F9 hide hint preserved. Line-heights tightened ~25% across the panel after the rewrite added enough content that the original spacing was clipping at the bottom.
+
+### Latency
+~1 s buffer end-to-end, dominated by OBS Media Source's default Network buffering. Acceptable here because the visible "video" is essentially static — player UI, station thumbnails, occasional title text. Nothing the viewer can spot the audio lagging behind. The streamer-side Network buffering / Render Delay options remain in OBS for anyone who needs tighter sync, but we don't document them by default.
+
+### Validation
+1. Smoke test: TCP listener bound on 127.0.0.1:17329; HTTP GET returns 503 while bridge isn't yet capturing, 200 + valid WAV header once it is.
+2. Probe: ~5 s capture, 2 069 804 bytes, RIFF/WAVE/fmt/data parsed cleanly, 96 kHz / 2 ch / 16 bit, 99.93 % of sampled positions non-zero — real audio, not silence.
+3. OBS in real use: audio reached Media Source, levels moved, control retention confirmed (pause/skip propagated, station change carried through).
+4. After dropping the render path: bridge runs without `StreamerModeEnabled` being on, single-path local audio, no doubling.
+
+### Release
+Tagged `v1.8.0`. Skipped v1.7.0 — the conceptual delta from v1.6.3 (architecture replacement, setting deletion, panel rewrite) is bigger than a typical minor warrants. v1.6.3 clients see the update banner on next launch (auto-check) or via the manual button.
+
+---
+
 ## 2026-05-01 — Session 15 — v1.6.3 — Capture-client AudioCategory + Streamer Info specifics
 
 ### Background

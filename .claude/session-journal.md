@@ -3,10 +3,19 @@
 A living journal that persists across compactions. Captures decisions, progress, and context.
 
 ## Current State
-- **Focus:** v1.6.3 in flight — capture-client `AudioCategory.Media` parity with the v1.4.2 render-client fix (closes Sonar AUX-leak edge case at startup) + Streamer Info copy rewrite naming `MSEDGEWEBVIEW2` vs `PULSENET-PLAYER` and the don't-drag-channels caveat. Red-team audit landed under `audits/`; `tools/audio-probe/` diagnostic harness now `.gitignore`'d. Version was briefly labelled v1.6.2 in the working tree, relabelled to v1.6.3 at commit time.
+- **Focus:** v1.8.0 about to ship — localhost audio stream replaces the entire dual-render bridge architecture. New `LocalAudioStreamServer` exposes captured WebView2 PCM as endless WAV at `http://127.0.0.1:17329/stream.wav`; OBS adds a Media Source pointing at the URL. Bridge runs unconditionally (capture-only, no render path), `StreamerModeEnabled` setting deleted entirely, Streamer Info panel rewritten with Video/Audio two-section walkthrough + Copy URL button. Sonar / Voicemeeter / Wavelink workflow no longer required. Skipped v1.7.0 — bigger conceptual change than a typical minor warrants.
 - **Blocked:** Real playlist IDs for 18 stations not yet provided.
 
 ## Log
+
+### 2026-05-01 — Completed: v1.8.0 — localhost audio stream architecture
+- **Architecture replacement.** v1.6.3's bridge re-emitted captured WebView2 audio to the system default endpoint, doubling local audio for any streamer not running an app router and requiring a `StreamerModeEnabled` opt-out toggle. New design: bridge captures only, forwards PCM to a `LocalAudioStreamServer` (TcpListener on 127.0.0.1:17329) that serves an endless 16-bit stereo WAV. OBS pulls the URL via Media Source. Listener hears WebView2 directly through Windows as normal. Single audio path locally.
+- **Why this works where v1.4.x's BrowserSourceServer didn't.** The earlier "audio over localhost" attempt hosted a YT player iframe in OBS Browser Source — two YouTube players with no control channel between them, sync hell. The v1.8.0 design has only one YT player (PulseNet's WebView2); OBS is a passive consumer of whatever PCM the bridge captures from it. Pause/skip in PulseNet propagates because there's nothing in OBS making playback decisions to desync.
+- **Validation.** Smoke test: TCP bound, 503 before bridge active, 200 + WAV header after. Probe: ~5s = 2.07 MB at 96 kHz / 2 ch / 16 bit, 99.93 % non-zero samples. OBS in real use: control retention confirmed, latency ~1 s (acceptable for radio because the visible "video" is essentially static).
+- **Deletions.** `StreamerModeEnabled` (PulsenetSettings), `streamerMode` web-message case (OverlayWindow), `streamerModeToggle` wiring (player.js), checkbox row (index.html), `streamer-mode-*` CSS, Sonar/Voicemeeter/Wavelink walkthrough paragraph (Streamer Info), entire render path in AudioBridge (Initialize / Start / GetService / GetBufferSize / pre-fill / pump-side render write / render cleanup in finally).
+- **Streamer Info rewrite.** Two-section walkthrough: 1. Video — Window Capture (steps 1-6, explicitly leave Capture Audio BETA unticked); 2. Audio — Media Source (steps 7-10, paste localhost URL, Copy URL button). Line-heights tightened ~25 % cumulative across the panel after the rewrite added enough content to clip at the bottom.
+- **Settings migration.** Existing v1.6.x `settings.json` keeps `StreamerModeEnabled` until next save; System.Text.Json ignores unknown properties on deserialize, then drops the field on next serialize. No migration code needed.
+- **Branch:** experiment/local-audio-stream → master via squash to a single feat: v1.8.0 commit.
 
 ### 2026-05-01 — Completed: v1.6.3 — capture-client AudioCategory.Media + Streamer Info specifics
 - **Capture-client fix.** v1.4.2 set `AudioStreamCategory.Media` on the bridge's render client only. The capture (process-loopback) client inherited the default `Other` category, which caused intermittent AUX-channel placement on Sonar at startup. Added matching `IAudioClient2.SetClientProperties` call before `Initialize` on the capture client in `src/Services/AudioBridge.cs`.

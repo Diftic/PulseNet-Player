@@ -727,13 +727,14 @@
   }
 
   // ---- Streamer Info sub-panel ----
-  // Static OBS-setup walkthrough plus a Streamer Mode toggle that gates the
-  // AudioBridge service (default off — non-streamers don't want the duplicate
-  // audio path).
-  var streamerBtn        = document.getElementById('streamer-settings-btn');
-  var streamerPanel      = document.getElementById('streamer-settings-panel');
-  var streamerBackBtn    = document.getElementById('streamer-back-btn');
-  var streamerModeToggle = document.getElementById('streamer-mode-toggle');
+  // OBS-setup walkthrough. Audio reaches OBS via a localhost HTTP stream
+  // (LocalAudioStreamServer in the host); video reaches OBS via Window
+  // Capture. The Copy URL button writes the stream URL to the clipboard
+  // for paste into OBS Media Source.
+  var streamerBtn       = document.getElementById('streamer-settings-btn');
+  var streamerPanel     = document.getElementById('streamer-settings-panel');
+  var streamerBackBtn   = document.getElementById('streamer-back-btn');
+  var copyStreamUrlBtn  = document.getElementById('copy-stream-url-btn');
 
   function showStreamerPanel() {
     if (settingsPanel) settingsPanel.classList.add('hidden');
@@ -759,14 +760,21 @@
     });
   }
 
-  if (streamerModeToggle) {
-    streamerModeToggle.addEventListener('change', function () {
+  if (copyStreamUrlBtn) {
+    copyStreamUrlBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var url = copyStreamUrlBtn.getAttribute('data-url') || '';
+      var original = copyStreamUrlBtn.textContent;
+      function flash(text) {
+        copyStreamUrlBtn.textContent = text;
+        setTimeout(function () { copyStreamUrlBtn.textContent = original; }, 1200);
+      }
       try {
-        window.chrome.webview.postMessage(JSON.stringify({
-          type: 'streamerMode',
-          enabled: !!streamerModeToggle.checked,
-        }));
-      } catch (_) {}
+        navigator.clipboard.writeText(url).then(
+          function () { flash('Copied!'); },
+          function () { flash('Copy failed'); }
+        );
+      } catch (_) { flash('Copy failed'); }
     });
   }
 

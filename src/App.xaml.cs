@@ -167,6 +167,13 @@ public partial class App : Application
         services.AddSingleton<GlobalHotkeyListener>();
         services.AddHostedService(p => p.GetRequiredService<GlobalHotkeyListener>());
 
+        // LocalAudioStreamServer: experimental loopback HTTP server that exposes
+        // the bridge's captured PCM as an endless WAV at http://127.0.0.1:17329/stream.wav
+        // for OBS Media Source. Singleton + hosted so AudioBridge can resolve it
+        // and start/stop are tied to the host lifecycle.
+        services.AddSingleton<LocalAudioStreamServer>();
+        services.AddHostedService(p => p.GetRequiredService<LocalAudioStreamServer>());
+
         // AudioBridge: WASAPI process-loopback that captures WebView2 audio and
         // re-emits it from PulseNet-Player.exe so OBS Window Capture's
         // Capture Audio (BETA) sees PulseNet as an audio-producing process.

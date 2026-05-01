@@ -483,11 +483,6 @@ public partial class OverlayWindow : Window
                         _settings.Save(_settings.Current with { ToggleHotkey = shortcut });
                     break;
 
-                case "streamerMode":
-                    var streamerEnabled = root.GetProperty("enabled").GetBoolean();
-                    _settings.Save(_settings.Current with { StreamerModeEnabled = streamerEnabled });
-                    break;
-
                 case "checkForUpdates":
                     _ = HandleCheckForUpdatesAsync();
                     break;
@@ -549,8 +544,6 @@ public partial class OverlayWindow : Window
                $"if(bsc)bsc.value={bannerScale};" +
                $"if(bos){{bos.value={bannerOp};if(bov)bov.textContent='{bannerOp}%';}}" +
                $"if(blb){{blb.textContent='{bannerLockText}';blb.classList.toggle('locked',{(s.BannerLocked ? "true" : "false")});}}" +
-               $"var smt=document.getElementById('streamer-mode-toggle');" +
-               $"if(smt)smt.checked={(s.StreamerModeEnabled ? "true" : "false")};" +
                $"window.__pulsenetVersion={versionLiteral};" +
                $"if(typeof window.__pulsenetRefreshVersionLabel==='function')window.__pulsenetRefreshVersionLabel();" +
                // Reset to main settings page when overlay re-opens.
