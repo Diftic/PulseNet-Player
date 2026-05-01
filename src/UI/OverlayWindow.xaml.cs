@@ -585,7 +585,7 @@ public partial class OverlayWindow : Window
                     var result = MessageBox.Show(
                         this,
                         $"A new version is available.\n\nCurrent: v{current}\nLatest: v{info.Version}\n\nUpdate and restart now?",
-                        "PulseNet Player — Update available",
+                        "PulseNet Player: Update available",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Information);
                     if (result == MessageBoxResult.Yes)

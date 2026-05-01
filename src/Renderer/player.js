@@ -471,7 +471,7 @@
   var versionBtn = document.getElementById('version-btn');
   function versionLabel() {
     var v = window.__pulsenetVersion || '0.0.0';
-    return 'v' + v + ' — Check for updates';
+    return 'v' + v + '  ·  Check for updates';
   }
   window.__pulsenetRefreshVersionLabel = function () {
     if (versionBtn && !versionBtn.disabled) versionBtn.textContent = versionLabel();

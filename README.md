@@ -30,21 +30,21 @@ Tune in while you fly. Keep it on while you fight. Let it run while you haul. Pu
 
 ## Features
 
-- **Sci-fi overlay frame** — Transparent, always-on-top window styled to fit the Star Citizen aesthetic
-- **19 stations** — A full lineup spanning electronic, classical, industrial, country, hip-hop, ambient, live performances, and more
-- **One-click playback** — Station selector buttons on both sides of the frame; click to tune in instantly
-- **Station hover preview** — Hover over any station button to preview its cover art inside the video window
-- **Adjustable opacity** — Fade the overlay to any level without losing interactivity
-- **Resizable window** — Scale from 20% to 100% of the full frame size; window resizes with content
-- **Draggable frame** — Reposition anywhere on screen by dragging the frame border
-- **Position memory** — The window remembers exactly where you left it between sessions
-- **Configurable hotkey** — Toggle the overlay on/off with any key combination you choose
-- **Lock mode** — Lock the overlay in place to prevent accidental repositioning
-- **Global scroll passthrough** — Scroll wheel is only consumed when the cursor is over the overlay
-- **Now Playing mini banner** — Compact "currently playing" banner stays visible when the overlay is hidden, so you always know the track without bringing the full frame back up
-- **Minimize behaviour** — Choose between minimizing to the system tray or to the mini banner; the toggle hotkey switches between full overlay and your chosen minimized state
-- **OBS streaming support** — Frame is capturable via OBS Window Capture (WGC); audio is exposed as a dedicated localhost stream (`http://127.0.0.1:17329/stream.wav`) that OBS picks up via a Media Source. No third-party audio routing required, no doubled local audio, no setup toggle &mdash; the bridge is always on, but only OBS hears it
-- **Auto-update** — Checks GitHub Releases on launch and offers an in-place update; a manual *Check for updates* button in Settings retriggers the check on demand
+- **Sci-fi overlay frame** - Transparent, always-on-top window styled to fit the Star Citizen aesthetic
+- **19 stations** - A full lineup spanning electronic, classical, industrial, country, hip-hop, ambient, live performances, and more
+- **One-click playback** - Station selector buttons on both sides of the frame; click to tune in instantly
+- **Station hover preview** - Hover over any station button to preview its cover art inside the video window
+- **Adjustable opacity** - Fade the overlay to any level without losing interactivity
+- **Resizable window** - Scale from 20% to 100% of the full frame size; window resizes with content
+- **Draggable frame** - Reposition anywhere on screen by dragging the frame border
+- **Position memory** - The window remembers exactly where you left it between sessions
+- **Configurable hotkey** - Toggle the overlay on/off with any key combination you choose
+- **Lock mode** - Lock the overlay in place to prevent accidental repositioning
+- **Global scroll passthrough** - Scroll wheel is only consumed when the cursor is over the overlay
+- **Now Playing mini banner** - Compact "currently playing" banner stays visible when the overlay is hidden, so you always know the track without bringing the full frame back up
+- **Minimize behaviour** - Choose between minimizing to the system tray or to the mini banner; the toggle hotkey switches between full overlay and your chosen minimized state
+- **OBS streaming support** - Frame is capturable via OBS Window Capture (WGC); audio is exposed as a dedicated localhost stream (`http://127.0.0.1:17329/stream.wav`) that OBS picks up via a Media Source. No third-party audio routing required, no doubled local audio, no setup toggle. The bridge is always on, but only OBS hears it
+- **Auto-update** - Checks GitHub Releases on launch and offers an in-place update; a manual *Check for updates* button in Settings retriggers the check on demand
 
 ---
 
@@ -61,8 +61,8 @@ Tune in while you fly. Keep it on while you fight. Let it run while you haul. Pu
 
 Two download options on the [Releases page](https://github.com/Diftic/PulseNet-Player/releases):
 
-- **`PulseNet-Setup.msi`** — Per-user installer. Adds a Start Menu shortcut, a desktop icon, and wires up auto-update. Recommended.
-- **`PulseNet-Player.exe`** — Standalone launcher. Run it directly from any folder, no installation.
+- **`PulseNet-Setup.msi`** - Per-user installer. Adds a Start Menu shortcut, a desktop icon, and wires up auto-update. Recommended.
+- **`PulseNet-Player.exe`** - Standalone launcher. Run it directly from any folder, no installation.
 
 Either way, launch the app and the overlay appears immediately. Default toggle hotkey is **F9**.
 
@@ -85,7 +85,7 @@ Either way, launch the app and the overlay appears immediately. Default toggle h
 | Choose minimize behaviour (tray / banner) | **Settings Menu** → **Miniplayer Settings** → minimize mode |
 | Reposition / lock the mini banner | **Settings Menu** → **Miniplayer Settings** |
 | Configure OBS streaming | **Settings Menu** → **Streamer Info** *(walkthrough + Copy URL button)* |
-| Check for updates manually | **Settings Menu** → **vX.Y.Z — Check for updates** |
+| Check for updates manually | **Settings Menu** → **vX.Y.Z - Check for updates** |
 | Exit | Right-click tray icon → **Quit** |
 
 ---
@@ -98,14 +98,14 @@ PulseNet broadcasts **19 stations** across the full spectrum of the 'Verse. Each
 
 | Station | Genre | DJ | Tagline |
 |---------|-------|----|---------|
-| **PulseNet LIVE** | All Channels · Mixed | — | *"Always broadcasting."* |
+| **PulseNet LIVE** | All Channels · Mixed | - | *"Always broadcasting."* |
 | **Alternative Routes** | Alt-Rock · Indie | Eon Lark | *"Find a different path."* |
 | **CrossWind** | Cultural Fusion · World Music | Amara Kade | *"Where worlds meet in rhythm."* |
 | **DeepSky Ambient** | Ambient · Chillwave | Sera Nyx | *"Drift beyond the noise."* |
 | **EchoVerse** | Indie · Emerging Artists | Juno Mirai | *"New voices. New signals."* |
 | **FlowState** | Hip-Hop · Rap · Trap | Vector Halden | *"Stay in the flow."* |
 | **Frontline Frequency** | Military · Ceremonial | Cmdr. Elias Rourke | *"Honor in every signal."* |
-| **HoloStage LIVE** | Live Performances · Concerts | — | *Broadcast live from the stage.* |
+| **HoloStage LIVE** | Live Performances · Concerts | - | *Broadcast live from the stage.* |
 | **IronChord** | Rock · Industrial · Metal | Viktor Halden | *"Forged in Sound."* |
 | **NovaBeat** | Electronic · Synthwave | Orion Vale | *"Feel the Pulse."* |
 
@@ -135,7 +135,7 @@ PulseNet Player is a **.NET 9 WPF** application. All visual elements, the sci-fi
 |-----------|----------|---------|
 | Overlay window | `src/UI/OverlayWindow.xaml.cs` | WPF host, hotkeys, drag engine, tray icon |
 | Mini banner window | `src/UI/MiniBannerWindow.xaml.cs` | Compact "Now Playing" banner shown while overlay is hidden |
-| Renderer | `src/Renderer/` | HTML/CSS/JS UI — frame, buttons, player |
+| Renderer | `src/Renderer/` | HTML/CSS/JS UI - frame, buttons, player |
 | Station config | `src/Renderer/stations.js` | All 19 stations: playlist IDs, icons, live flags |
 | Player controller | `src/Renderer/player.js` | YouTube IFrame API, settings bridge to C# |
 | Audio bridge | `src/Services/AudioBridge.cs` | WASAPI process-loopback capture from WebView2; forwards PCM to `LocalAudioStreamServer` |
@@ -149,9 +149,9 @@ PulseNet Player is a **.NET 9 WPF** application. All visual elements, the sci-fi
 
 **Virtual host:** The renderer is served over `https://pulsenet.local/` via WebView2's `SetVirtualHostNameToFolderMapping`. This satisfies the YouTube IFrame API's HTTPS requirement without needing a real web server.
 
-**Drag system:** JavaScript detects `mousedown` on non-interactive frame areas and sends a `startDrag` message to C# via `window.chrome.webview.postMessage`. A `WH_MOUSE_LL` low-level mouse hook handles `MOUSEMOVE` and `LBUTTONUP` to move the window. The hook is only installed while the overlay is visible — zero system-wide impact when hidden.
+**Drag system:** JavaScript detects `mousedown` on non-interactive frame areas and sends a `startDrag` message to C# via `window.chrome.webview.postMessage`. A `WH_MOUSE_LL` low-level mouse hook handles `MOUSEMOVE` and `LBUTTONUP` to move the window. The hook is only installed while the overlay is visible - zero system-wide impact when hidden.
 
-**Zoom:** The `ApplyZoom` method resizes the WPF window proportionally and sets `WebView.ZoomFactor` in the same call. CSS zoom is not used — this ensures correct hit areas and no visual blink at all zoom levels.
+**Zoom:** The `ApplyZoom` method resizes the WPF window proportionally and sets `WebView.ZoomFactor` in the same call. CSS zoom is not used - this ensures correct hit areas and no visual blink at all zoom levels.
 
 **Settings bridge:** JS posts JSON messages to C# (`{ type: 'opacity', value: 0.8 }`, `{ type: 'zoom', pct: 80 }`, etc.). C# handles each message type in `WebMessageReceived`.
 
@@ -179,17 +179,17 @@ All station configuration is in `src/Renderer/stations.js`.
 
 | Flag | Hover preview shown |
 |------|---------------------|
-| `live: false` | `Offline_<icon filename>` — greyed-out offline version |
-| `live: true` | `<icon filename>` — full-colour station art |
+| `live: false` | `Offline_<icon filename>` - greyed-out offline version |
+| `live: true` | `<icon filename>` - full-colour station art |
 
 ### Station icon files
 
 All icons live in `src/Renderer/assets/stations/`. Each station requires two files:
 
-- `PulseNet_-_<StationName>_logo.png` — Full-colour (used when live)
-- `Offline_PulseNet_-_<StationName>_logo.png` — Dimmed version (used when offline)
+- `PulseNet_-_<StationName>_logo.png` - Full-colour (used when live)
+- `Offline_PulseNet_-_<StationName>_logo.png` - Dimmed version (used when offline)
 
-> **Important:** After editing files in `src/Assets/`, copy them to `src/Renderer/assets/` before rebuilding. The build process copies from `Renderer/` — not from `Assets/`.
+> **Important:** After editing files in `src/Assets/`, copy them to `src/Renderer/assets/` before rebuilding. The build process copies from `Renderer/` - not from `Assets/`.
 
 ### Adding a new station
 
@@ -202,23 +202,23 @@ All icons live in `src/Renderer/assets/stations/`. Each station requires two fil
 ## Roadmap
 
 - [ ] Wire real YouTube playlist IDs for all 19 stations
-- [x] Volume control — provided by the embedded YouTube player
-- [x] "Now Playing" info — track title shown inside the YouTube embed
-- [x] "Now Playing" mini banner — persistent compact track readout while the overlay is hidden
-- [x] OBS streaming support — Window Capture (WGC) for video + dedicated localhost audio stream (`http://127.0.0.1:17329/stream.wav`) consumed by OBS Media Source
+- [x] Volume control - provided by the embedded YouTube player
+- [x] "Now Playing" info - track title shown inside the YouTube embed
+- [x] "Now Playing" mini banner - persistent compact track readout while the overlay is hidden
+- [x] OBS streaming support - Window Capture (WGC) for video + dedicated localhost audio stream (`http://127.0.0.1:17329/stream.wav`) consumed by OBS Media Source
 - [x] Auto-update mechanism (in-app check on launch + manual recheck button + self-install)
-- [x] GitHub Actions CI — build + publish on tag push
+- [x] GitHub Actions CI - build + publish on tag push
 - [x] WiX installer (`PulseNet-Setup.msi`) + portable `.exe`
 
 ---
 
 ## In-Universe Lore
 
-**Pulse Broadcasting Network (PulseNet)** is the Entertainment Division of The Exelus Corporation — one of the United Empire of Earth's largest entertainment broadcast networks, founded in 2905. With over 50 years of operation spanning the full breadth of UEE space, PulseNet reaches listeners from the core worlds to the outermost frontier.
+**Pulse Broadcasting Network (PulseNet)** is the Entertainment Division of The Exelus Corporation - one of the United Empire of Earth's largest entertainment broadcast networks, founded in 2905. With over 50 years of operation spanning the full breadth of UEE space, PulseNet reaches listeners from the core worlds to the outermost frontier.
 
 Every station in the lineup is staffed, curated, and voiced by characters with real histories rooted in the 'Verse. Eon Lark chases sound on Alternative Routes. Dustline remembers every cargo run on Trailstar. Marik Thorne keeps the line moving on The Foundry. Commander Elias Rourke honors the fallen on Frontline Frequency.
 
-Whatever you're doing out there — PulseNet is with you.
+Whatever you're doing out there - PulseNet is with you.
 
 > *"The 'Verse always has a soundtrack."*
 

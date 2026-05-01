@@ -40,7 +40,7 @@ public partial class SplashWindow : Window
         catch (Exception ex)
         {
             _log.LogError(ex, "Self-update failed");
-            UpdateLabel.Text        = "Update failed — try again";
+            UpdateLabel.Text        = "Update failed. Try again";
             UpdateButton.Content    = "Retry";
             UpdateButton.Visibility = Visibility.Visible;
             UpdateButton.IsEnabled  = true;

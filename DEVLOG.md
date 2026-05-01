@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-05-01 - v1.8.1 - Streamer Info polish
+
+Two small follow-ups after looking at v1.8.0 in real use:
+
+- **Header-to-list gap.** The `1. Video` and `2. Audio` section headers were sitting too far above their respective `<ol>` lists because `.streamer-info-content`'s flex `gap: 12px` applies uniformly between every child. Added `margin-bottom: -8px` on `.streamer-info-section` so a header pulls its following OL up against itself, preserving the 12px gap between unrelated siblings.
+- **Em-dashes out of user-facing text.** Section headers, the "audio comes from the next source" step, the F9 tip, the version-banner button label, the Update available MessageBox title, the Splash window's "Update failed" label, and every em-dash in README all swapped for colons / periods / hyphens / a centred dot in the version label. Per-context choice rather than a uniform substitute (colons for definition pairs, periods to split run-on sentences, hyphens for inline separators).
+
+---
+
 ## 2026-05-01 — Session 16 — v1.8.0 — Localhost audio stream replaces dual-render bridge
 
 ### Background
